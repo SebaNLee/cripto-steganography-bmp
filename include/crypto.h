@@ -31,4 +31,7 @@ typedef struct
 crypto_algo_t crypto_algo_from_str(const char *s);
 crypto_mode_t crypto_mode_from_str(const char *s);
 
+int crypto_enabled(const crypto_params_t *p);
+void crypto_apply_defaults(crypto_params_t *p);
+
 #endif
