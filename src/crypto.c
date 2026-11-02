@@ -8,33 +8,91 @@
 #define PBKDF2_ITERATIONS 10000
 #define PBKDF2_SALT_LEN 8
 
-/* CFB is 8-bit feedback and OFB is 128-bit; 3des is des_ede3 (three keys). */
-static const char *const cipher_names[CRYPTO_3DES + 1][CRYPTO_CBC + 1] = {
-    [CRYPTO_AES128][CRYPTO_ECB] = "aes-128-ecb",
-    [CRYPTO_AES128][CRYPTO_CFB] = "aes-128-cfb8",
-    [CRYPTO_AES128][CRYPTO_OFB] = "aes-128-ofb",
-    [CRYPTO_AES128][CRYPTO_CBC] = "aes-128-cbc",
-    [CRYPTO_AES192][CRYPTO_ECB] = "aes-192-ecb",
-    [CRYPTO_AES192][CRYPTO_CFB] = "aes-192-cfb8",
-    [CRYPTO_AES192][CRYPTO_OFB] = "aes-192-ofb",
-    [CRYPTO_AES192][CRYPTO_CBC] = "aes-192-cbc",
-    [CRYPTO_AES256][CRYPTO_ECB] = "aes-256-ecb",
-    [CRYPTO_AES256][CRYPTO_CFB] = "aes-256-cfb8",
-    [CRYPTO_AES256][CRYPTO_OFB] = "aes-256-ofb",
-    [CRYPTO_AES256][CRYPTO_CBC] = "aes-256-cbc",
-    [CRYPTO_3DES][CRYPTO_ECB] = "des-ede3-ecb",
-    [CRYPTO_3DES][CRYPTO_CFB] = "des-ede3-cfb8",
-    [CRYPTO_3DES][CRYPTO_OFB] = "des-ede3-ofb",
-    [CRYPTO_3DES][CRYPTO_CBC] = "des-ede3-cbc",
-};
+static const EVP_CIPHER *get_aes128(crypto_mode_t mode)
+{
+    switch (mode)
+    {
+    case CRYPTO_ECB:
+        return EVP_aes_128_ecb();
+    case CRYPTO_CFB:
+        return EVP_aes_128_cfb8();
+    case CRYPTO_OFB:
+        return EVP_aes_128_ofb();
+    case CRYPTO_CBC:
+        return EVP_aes_128_cbc();
+    default:
+        return NULL;
+    }
+}
 
+static const EVP_CIPHER *get_aes192(crypto_mode_t mode)
+{
+    switch (mode)
+    {
+    case CRYPTO_ECB:
+        return EVP_aes_192_ecb();
+    case CRYPTO_CFB:
+        return EVP_aes_192_cfb8();
+    case CRYPTO_OFB:
+        return EVP_aes_192_ofb();
+    case CRYPTO_CBC:
+        return EVP_aes_192_cbc();
+    default:
+        return NULL;
+    }
+}
+
+static const EVP_CIPHER *get_aes256(crypto_mode_t mode)
+{
+    switch (mode)
+    {
+    case CRYPTO_ECB:
+        return EVP_aes_256_ecb();
+    case CRYPTO_CFB:
+        return EVP_aes_256_cfb8();
+    case CRYPTO_OFB:
+        return EVP_aes_256_ofb();
+    case CRYPTO_CBC:
+        return EVP_aes_256_cbc();
+    default:
+        return NULL;
+    }
+}
+
+/* des_ede3 is three-key 3DES; des_ede would be two-key. */
+static const EVP_CIPHER *get_3des(crypto_mode_t mode)
+{
+    switch (mode)
+    {
+    case CRYPTO_ECB:
+        return EVP_des_ede3_ecb();
+    case CRYPTO_CFB:
+        return EVP_des_ede3_cfb8();
+    case CRYPTO_OFB:
+        return EVP_des_ede3_ofb();
+    case CRYPTO_CBC:
+        return EVP_des_ede3_cbc();
+    default:
+        return NULL;
+    }
+}
+
+/* CFB is 8-bit feedback (cfb8) and OFB is 128-bit. */
 static const EVP_CIPHER *get_cipher(const crypto_params_t *p)
 {
-    if (p->algo < CRYPTO_AES128 || p->algo > CRYPTO_3DES)
+    switch (p->algo)
+    {
+    case CRYPTO_AES128:
+        return get_aes128(p->mode);
+    case CRYPTO_AES192:
+        return get_aes192(p->mode);
+    case CRYPTO_AES256:
+        return get_aes256(p->mode);
+    case CRYPTO_3DES:
+        return get_3des(p->mode);
+    default:
         return NULL;
-    if (p->mode < CRYPTO_ECB || p->mode > CRYPTO_CBC)
-        return NULL;
-    return EVP_get_cipherbyname(cipher_names[p->algo][p->mode]);
+    }
 }
 
 /* out gets the key followed by the iv. */
