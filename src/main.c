@@ -60,6 +60,12 @@ int main(int argc, char const *argv[])
     stegEmbed(LSB4, body, sizeof(body), data, sizeof(data));
     stegExtract(LSB4, body, sizeof(body), out, sizeof(out));
     printf("LSB4: %d (should be 1)\n", memcmp(data, out, sizeof(data)) == 0);
+
+    memset(body, 0, sizeof(body));
+    memset(out, 0, sizeof(out));
+    stegEmbed(LSBI, body, sizeof(body), data, sizeof(data));
+    stegExtract(LSBI, body, sizeof(body), out, sizeof(out));
+    printf("LSBI: %d (should be 1)\n", memcmp(data, out, sizeof(data)) == 0);
     // TODO test steg
 
     return 0;
