@@ -58,4 +58,27 @@ static inline uint8_t lsbSet(uint8_t value, uint8_t bit)
     return bitSet(value, 0, bit);
 }
 
+/**
+ * @brief Read the low nibble of a byte.
+ *
+ * @param value Byte to inspect.
+ * @return Value of bits 0 through 3, using ranges [0, 15].
+ */
+static inline uint8_t lowNibbleGet(uint8_t value)
+{
+    return (uint8_t)(value & 0x0F);
+}
+
+/**
+ * @brief Write the low nibble of a byte.
+ *
+ * @param value Byte to write.
+ * @param nibble Low nibble, where only its four least significant bits are used.
+ * @return Byte with its low nibble replaced.
+ */
+static inline uint8_t lowNibbleSet(uint8_t value, uint8_t nibble)
+{
+    return (uint8_t)((value & 0xF0) | (nibble & 0x0F));
+}
+
 #endif
