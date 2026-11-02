@@ -1,8 +1,12 @@
 #include "crypto.h"
 
 #include <openssl/evp.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#define PBKDF2_ITERATIONS 10000
+#define PBKDF2_SALT_LEN 8
 
 /* CFB is 8-bit feedback and OFB is 128-bit; 3des is des_ede3 (three keys). */
 static const char *const cipher_names[CRYPTO_3DES + 1][CRYPTO_CBC + 1] = {
@@ -31,6 +35,20 @@ static const EVP_CIPHER *get_cipher(const crypto_params_t *p)
     if (p->mode < CRYPTO_ECB || p->mode > CRYPTO_CBC)
         return NULL;
     return EVP_get_cipherbyname(cipher_names[p->algo][p->mode]);
+}
+
+/* out gets the key followed by the iv. */
+static int derive_key_iv(const char *password, const EVP_CIPHER *cipher, uint8_t *out)
+{
+    const uint8_t salt[PBKDF2_SALT_LEN] = {0};
+    int len = EVP_CIPHER_key_length(cipher) + EVP_CIPHER_iv_length(cipher);
+
+    if (!PKCS5_PBKDF2_HMAC(password, -1, salt, sizeof(salt), PBKDF2_ITERATIONS, EVP_sha256(), len, out))
+    {
+        fprintf(stderr, "stegobmp: key derivation failed\n");
+        return -1;
+    }
+    return 0;
 }
 
 crypto_algo_t crypto_algo_from_str(const char *s)
