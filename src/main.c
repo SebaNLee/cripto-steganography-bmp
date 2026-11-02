@@ -1,3 +1,5 @@
+#include "lib/bit.h"
+
 #include <stdio.h>
 
 int main(int argc, char const *argv[])
@@ -28,6 +30,17 @@ int main(int argc, char const *argv[])
      *
      * reglas: solo main imprime; main libera; capacidad antes de escribir.
      */
+
+    // TODO delete bit lib test
+    (void)argc;
+    (void)argv;
+    uint8_t temp[4];
+    be32Write(temp, 0x00CACA);
+    printf("be32: %08X (should be 0000CACA)\n", (unsigned)be32Read(temp));
+    printf("lsb: %u (should be 1)\n", lsbGet(lsbSet(0xAA, 1)));
+    printf("nibble: %02X (should be A5)\n", (unsigned)lowNibbleSet(0xAB, 0x05));
+    printf("bit3: %u (should be 1)\n", bitGet(bitSet(0x00, 3, 1), 3));
+    // TODO delete bit lib test
 
     return 0;
 }
