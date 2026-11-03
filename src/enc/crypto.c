@@ -4,7 +4,6 @@
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -226,14 +225,17 @@ int crypto_enabled(const CryptoParams *p)
     return p->password != NULL;
 }
 
+int crypto_options_ignored(const CryptoParams *p)
+{
+    if (crypto_enabled(p))
+        return 0;
+    return p->algo != CRYPTO_ALGO_UNSET || p->mode != CRYPTO_MODE_UNSET;
+}
+
 void crypto_apply_defaults(CryptoParams *p)
 {
     if (!crypto_enabled(p))
-    {
-        if (p->algo != CRYPTO_ALGO_UNSET || p->mode != CRYPTO_MODE_UNSET)
-            fprintf(stderr, "stegobmp: warning: -a and -m are ignored without -pass\n");
         return;
-    }
 
     if (p->algo == CRYPTO_ALGO_UNSET)
         p->algo = CRYPTO_AES128;
