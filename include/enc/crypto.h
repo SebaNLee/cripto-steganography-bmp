@@ -24,6 +24,17 @@ typedef enum
     CRYPTO_CBC,
 } CryptoMode;
 
+typedef enum
+{
+    CRYPTO_OK = 0,
+    CRYPTO_ERR_INVALID_CIPHER,
+    CRYPTO_ERR_TOO_LARGE,
+    CRYPTO_ERR_KEY_DERIVATION,
+    CRYPTO_ERR_NO_MEMORY,
+    CRYPTO_ERR_ENCRYPT,
+    CRYPTO_ERR_DECRYPT,
+} CryptoResult;
+
 typedef struct
 {
     CryptoAlgo algo;
@@ -37,10 +48,12 @@ CryptoMode crypto_mode_from_str(const char *s);
 int crypto_enabled(const CryptoParams *p);
 void crypto_apply_defaults(CryptoParams *p);
 
-int crypto_encrypt(const CryptoParams *p, const uint8_t *in, size_t in_len, uint8_t **out,
-                   size_t *out_len);
+CryptoResult crypto_encrypt(const CryptoParams *p, const uint8_t *in, size_t in_len,
+                            uint8_t **out, size_t *out_len);
 
-int crypto_decrypt(const CryptoParams *p, const uint8_t *in, size_t in_len, uint8_t **out,
-                   size_t *out_len);
+CryptoResult crypto_decrypt(const CryptoParams *p, const uint8_t *in, size_t in_len,
+                            uint8_t **out, size_t *out_len);
+
+const char *crypto_error_string(CryptoResult result);
 
 #endif

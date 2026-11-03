@@ -104,46 +104,37 @@ static int derive_key_iv(const char *password, const EVP_CIPHER *cipher, uint8_t
     const uint8_t salt[PBKDF2_SALT_LEN] = {0};
     int len = EVP_CIPHER_key_length(cipher) + EVP_CIPHER_iv_length(cipher);
 
-    if (!PKCS5_PBKDF2_HMAC(password, -1, salt, sizeof(salt), PBKDF2_ITERATIONS, EVP_sha256(), len, out))
-    {
-        fprintf(stderr, "stegobmp: key derivation failed\n");
-        return -1;
-    }
-    return 0;
+    return PKCS5_PBKDF2_HMAC(password, -1, salt, sizeof(salt), PBKDF2_ITERATIONS, EVP_sha256(), len, out);
 }
 
 /* enc is 1 to encrypt and 0 to decrypt, as in EVP_CipherInit_ex. */
-static int run_cipher(const CryptoParams *p, int enc, const uint8_t *in, size_t in_len,
-                      uint8_t **out, size_t *out_len)
+static CryptoResult run_cipher(const CryptoParams *p, int enc, const uint8_t *in, size_t in_len,
+                               uint8_t **out, size_t *out_len)
 {
-    const char *action = enc ? "encryption" : "decryption";
     uint8_t key_iv[EVP_MAX_KEY_LENGTH + EVP_MAX_IV_LENGTH];
     EVP_CIPHER_CTX *ctx = NULL;
     uint8_t *buf = NULL;
     int update_len = 0;
     int final_len = 0;
-    int ret = -1;
+    CryptoResult ret;
 
     const EVP_CIPHER *cipher = get_cipher(p);
     if (cipher == NULL)
-    {
-        fprintf(stderr, "stegobmp: invalid algorithm or mode\n");
-        return -1;
-    }
+        return CRYPTO_ERR_INVALID_CIPHER;
     /* EVP_CipherUpdate takes an int length. */
     if (in_len > INT_MAX - EVP_MAX_BLOCK_LENGTH)
+        return CRYPTO_ERR_TOO_LARGE;
+    if (!derive_key_iv(p->password, cipher, key_iv))
     {
-        fprintf(stderr, "stegobmp: data too large for %s\n", action);
-        return -1;
+        ret = CRYPTO_ERR_KEY_DERIVATION;
+        goto cleanup;
     }
-    if (derive_key_iv(p->password, cipher, key_iv) != 0)
-        return -1;
 
     buf = malloc(in_len + EVP_CIPHER_block_size(cipher));
     ctx = EVP_CIPHER_CTX_new();
     if (buf == NULL || ctx == NULL)
     {
-        fprintf(stderr, "stegobmp: out of memory\n");
+        ret = CRYPTO_ERR_NO_MEMORY;
         goto cleanup;
     }
 
@@ -153,14 +144,14 @@ static int run_cipher(const CryptoParams *p, int enc, const uint8_t *in, size_t 
         !EVP_CipherUpdate(ctx, buf, &update_len, in, (int)in_len) ||
         !EVP_CipherFinal_ex(ctx, buf + update_len, &final_len))
     {
-        fprintf(stderr, "stegobmp: %s failed\n", action);
+        ret = enc ? CRYPTO_ERR_ENCRYPT : CRYPTO_ERR_DECRYPT;
         goto cleanup;
     }
 
     *out = buf;
     *out_len = (size_t)update_len + (size_t)final_len;
     buf = NULL;
-    ret = 0;
+    ret = CRYPTO_OK;
 
 cleanup:
     OPENSSL_cleanse(key_iv, sizeof(key_iv));
@@ -169,16 +160,39 @@ cleanup:
     return ret;
 }
 
-int crypto_encrypt(const CryptoParams *p, const uint8_t *in, size_t in_len, uint8_t **out,
-                   size_t *out_len)
+CryptoResult crypto_encrypt(const CryptoParams *p, const uint8_t *in, size_t in_len,
+                            uint8_t **out, size_t *out_len)
 {
     return run_cipher(p, 1, in, in_len, out, out_len);
 }
 
-int crypto_decrypt(const CryptoParams *p, const uint8_t *in, size_t in_len, uint8_t **out,
-                   size_t *out_len)
+CryptoResult crypto_decrypt(const CryptoParams *p, const uint8_t *in, size_t in_len,
+                            uint8_t **out, size_t *out_len)
 {
     return run_cipher(p, 0, in, in_len, out, out_len);
+}
+
+const char *crypto_error_string(CryptoResult result)
+{
+    switch (result)
+    {
+    case CRYPTO_OK:
+        return "ok";
+    case CRYPTO_ERR_INVALID_CIPHER:
+        return "invalid algorithm or mode";
+    case CRYPTO_ERR_TOO_LARGE:
+        return "data too large to encrypt";
+    case CRYPTO_ERR_KEY_DERIVATION:
+        return "key derivation failed";
+    case CRYPTO_ERR_NO_MEMORY:
+        return "out of memory";
+    case CRYPTO_ERR_ENCRYPT:
+        return "encryption failed";
+    case CRYPTO_ERR_DECRYPT:
+        return "decryption failed (wrong password?)";
+    default:
+        return "unknown error";
+    }
 }
 
 CryptoAlgo crypto_algo_from_str(const char *s)
