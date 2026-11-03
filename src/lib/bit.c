@@ -1,40 +1,40 @@
 #include "lib/bit.h"
 
-unsigned streamBitGet(const uint8_t *buf, size_t bitIndex)
+unsigned stream_bit_get(const uint8_t *buf, size_t bit_index)
 {
-    size_t byteIndex = bitIndex >> 0x03;
-    size_t bitOffset = bitIndex & 0x07;
-    size_t shift = 0x07 - bitOffset;
-    uint8_t value = buf[byteIndex];
+    size_t byte_index = bit_index >> 0x03;
+    size_t bit_offset = bit_index & 0x07;
+    size_t shift = 0x07 - bit_offset;
+    uint8_t value = buf[byte_index];
     unsigned bit = (value >> shift) & 0x01;
 
     return bit;
 }
 
-void streamBitSet(uint8_t *buf, size_t bitIndex, unsigned bit)
+void stream_bit_set(uint8_t *buf, size_t bit_index, unsigned bit)
 {
-    size_t byteIndex = bitIndex >> 0x03;
-    size_t bitOffset = bitIndex & 0x07;
-    size_t shift = 0x07 - bitOffset;
+    size_t byte_index = bit_index >> 0x03;
+    size_t bit_offset = bit_index & 0x07;
+    size_t shift = 0x07 - bit_offset;
     uint8_t mask = (uint8_t)(0x01 << shift);
 
     if ((bit & 0x01) != 0)
     {
-        buf[byteIndex] |= mask;
+        buf[byte_index] |= mask;
     }
     else
     {
-        buf[byteIndex] &= (uint8_t)~mask;
+        buf[byte_index] &= (uint8_t)~mask;
     }
 }
 
-uint8_t streamNibbleGet(const uint8_t *buf, size_t nibbleIndex)
+uint8_t stream_nibble_get(const uint8_t *buf, size_t nibble_index)
 {
-    size_t byteIndex = nibbleIndex >> 0x01;
-    uint8_t value = buf[byteIndex];
+    size_t byte_index = nibble_index >> 0x01;
+    uint8_t value = buf[byte_index];
     uint8_t nibble;
 
-    if ((nibbleIndex & 0x01) == 0)
+    if ((nibble_index & 0x01) == 0)
     {
         nibble = (uint8_t)((value >> 0x04) & 0x0F);
     }
@@ -46,26 +46,26 @@ uint8_t streamNibbleGet(const uint8_t *buf, size_t nibbleIndex)
     return nibble;
 }
 
-void streamNibbleSet(uint8_t *buf, size_t nibbleIndex, uint8_t nibble)
+void stream_nibble_set(uint8_t *buf, size_t nibble_index, uint8_t nibble)
 {
-    size_t byteIndex = nibbleIndex >> 0x01;
-    uint8_t value = buf[byteIndex];
-    uint8_t newNibble = (uint8_t)(nibble & 0x0F);
+    size_t byte_index = nibble_index >> 0x01;
+    uint8_t value = buf[byte_index];
+    uint8_t new_nibble = (uint8_t)(nibble & 0x0F);
 
-    if ((nibbleIndex & 0x01) == 0)
+    if ((nibble_index & 0x01) == 0)
     {
-        value = (uint8_t)((value & 0x0F) | (newNibble << 0x04));
+        value = (uint8_t)((value & 0x0F) | (new_nibble << 0x04));
     }
     else
     {
-        value = (uint8_t)((value & 0xF0) | newNibble);
+        value = (uint8_t)((value & 0xF0) | new_nibble);
     }
 
-    buf[byteIndex] = value;
+    buf[byte_index] = value;
 }
 
 // TODO maybe move to payload.c
-uint32_t be32Read(const uint8_t *buf)
+uint32_t be32_read(const uint8_t *buf)
 {
     uint32_t value = 0;
 
@@ -78,7 +78,7 @@ uint32_t be32Read(const uint8_t *buf)
 }
 
 // TODO maybe move to payload.c
-void be32Write(uint8_t *buf, uint32_t value)
+void be32_write(uint8_t *buf, uint32_t value)
 {
     buf[0] = (uint8_t)(value >> 0x18);
     buf[1] = (uint8_t)(value >> 0x10);

@@ -7,7 +7,7 @@
 #define LSBI_CHANNELS 0x03
 #define LSBI_RED_CHANNEL 0x02
 
-static uint8_t lsbiPattern(uint8_t value)
+static uint8_t lsbi_pattern(uint8_t value)
 {
     uint8_t bit2 = (value >> 0x02) & 0x01;
     uint8_t bit1 = (value >> 0x01) & 0x01;
@@ -15,11 +15,11 @@ static uint8_t lsbiPattern(uint8_t value)
     return (bit2 << 0x01) | bit1;
 }
 
-static size_t lsbiUsableCount(size_t bodyLen)
+static size_t lsbi_usable_count(size_t body_len)
 {
     size_t count = 0;
 
-    for (size_t i = LSBI_DATA_OFFSET; i < bodyLen; i++)
+    for (size_t i = LSBI_DATA_OFFSET; i < body_len; i++)
     {
         if ((i % LSBI_CHANNELS) != LSBI_RED_CHANNEL)
         {
@@ -30,40 +30,40 @@ static size_t lsbiUsableCount(size_t bodyLen)
     return count;
 }
 
-static size_t lsbiCapacity(size_t bodyLen)
+static size_t lsbi_capacity(size_t body_len)
 {
-    return lsbiUsableCount(bodyLen) / 0x08;
+    return lsbi_usable_count(body_len) / 0x08;
 }
 
-static StegResult lsbiEmbed(uint8_t *body, size_t bodyLen, uint8_t *data, size_t dataLen)
+static StegResult lsbi_embed(uint8_t *body, size_t body_len, uint8_t *data, size_t data_len)
 {
-    if (dataLen > lsbiCapacity(bodyLen))
+    if (data_len > lsbi_capacity(body_len))
     {
         return STEG_ERR_CAPACITY;
     }
-    if (dataLen == 0)
+    if (data_len == 0)
     {
         return STEG_OK;
     }
 
     size_t changed[LSBI_MAP_BITS] = {0};
     size_t same[LSBI_MAP_BITS] = {0};
-    size_t bitCount = dataLen * 0x08;
-    size_t bitIndex = 0;
+    size_t bit_count = data_len * 0x08;
+    size_t bit_index = 0;
 
     // first pass, counts per pattern
-    for (size_t i = LSBI_DATA_OFFSET; i < bodyLen && bitIndex < bitCount; i++)
+    for (size_t i = LSBI_DATA_OFFSET; i < body_len && bit_index < bit_count; i++)
     {
         if ((i % LSBI_CHANNELS) == LSBI_RED_CHANNEL)
         {
             continue;
         }
 
-        uint8_t pattern = lsbiPattern(body[i]);
-        uint8_t coverBit = lsbGet(body[i]);
-        uint8_t dataBit = streamBitGet(data, bitIndex);
+        uint8_t pattern = lsbi_pattern(body[i]);
+        uint8_t cover_bit = lsb_get(body[i]);
+        uint8_t data_bit = stream_bit_get(data, bit_index);
 
-        if (coverBit != dataBit)
+        if (cover_bit != data_bit)
         {
             changed[pattern]++;
         }
@@ -72,7 +72,7 @@ static StegResult lsbiEmbed(uint8_t *body, size_t bodyLen, uint8_t *data, size_t
             same[pattern]++;
         }
 
-        bitIndex++;
+        bit_index++;
     }
 
     uint8_t map[LSBI_MAP_BITS];
@@ -80,36 +80,36 @@ static StegResult lsbiEmbed(uint8_t *body, size_t bodyLen, uint8_t *data, size_t
     for (size_t i = 0; i < LSBI_MAP_BITS; i++)
     {
         map[i] = (changed[i] > same[i]) ? 0x01 : 0x00;
-        body[i] = lsbSet(body[i], map[i]);
+        body[i] = lsb_set(body[i], map[i]);
     }
 
-    bitIndex = 0;
+    bit_index = 0;
 
     // second pass, write to bmp (XOR with map)
-    for (size_t i = LSBI_DATA_OFFSET; i < bodyLen && bitIndex < bitCount; i++)
+    for (size_t i = LSBI_DATA_OFFSET; i < body_len && bit_index < bit_count; i++)
     {
         if ((i % LSBI_CHANNELS) == LSBI_RED_CHANNEL)
         {
             continue;
         }
 
-        uint8_t pattern = lsbiPattern(body[i]);
-        uint8_t dataBit = streamBitGet(data, bitIndex);
+        uint8_t pattern = lsbi_pattern(body[i]);
+        uint8_t data_bit = stream_bit_get(data, bit_index);
 
-        body[i] = lsbSet(body[i], dataBit ^ map[pattern]);
-        bitIndex++;
+        body[i] = lsb_set(body[i], data_bit ^ map[pattern]);
+        bit_index++;
     }
 
     return STEG_OK;
 }
 
-static StegResult lsbiExtract(uint8_t *body, size_t bodyLen, uint8_t *out, size_t outLen)
+static StegResult lsbi_extract(uint8_t *body, size_t body_len, uint8_t *out, size_t out_len)
 {
-    if (outLen > lsbiCapacity(bodyLen))
+    if (out_len > lsbi_capacity(body_len))
     {
         return STEG_ERR_CAPACITY;
     }
-    if (outLen == 0)
+    if (out_len == 0)
     {
         return STEG_OK;
     }
@@ -118,29 +118,29 @@ static StegResult lsbiExtract(uint8_t *body, size_t bodyLen, uint8_t *out, size_
 
     for (size_t i = 0; i < LSBI_MAP_BITS; i++)
     {
-        map[i] = lsbGet(body[i]);
+        map[i] = lsb_get(body[i]);
     }
 
-    memset(out, 0, outLen);
+    memset(out, 0, out_len);
 
-    size_t bitCount = outLen * 0x08;
-    size_t bitIndex = 0;
+    size_t bit_count = out_len * 0x08;
+    size_t bit_index = 0;
 
-    for (size_t i = LSBI_DATA_OFFSET; i < bodyLen && bitIndex < bitCount; i++)
+    for (size_t i = LSBI_DATA_OFFSET; i < body_len && bit_index < bit_count; i++)
     {
         if ((i % LSBI_CHANNELS) == LSBI_RED_CHANNEL)
         {
             continue;
         }
 
-        uint8_t pattern = lsbiPattern(body[i]);
-        uint8_t bit = lsbGet(body[i]) ^ map[pattern];
+        uint8_t pattern = lsbi_pattern(body[i]);
+        uint8_t bit = lsb_get(body[i]) ^ map[pattern];
 
-        streamBitSet(out, bitIndex, bit);
-        bitIndex++;
+        stream_bit_set(out, bit_index, bit);
+        bit_index++;
     }
 
-    if (bitIndex != bitCount)
+    if (bit_index != bit_count)
     {
         return STEG_ERR_CAPACITY;
     }
@@ -148,8 +148,8 @@ static StegResult lsbiExtract(uint8_t *body, size_t bodyLen, uint8_t *out, size_
     return STEG_OK;
 }
 
-StegOps lsbiOps = {
-    .capacity = lsbiCapacity,
-    .embed = lsbiEmbed,
-    .extract = lsbiExtract,
+StegOps lsbi_ops = {
+    .capacity = lsbi_capacity,
+    .embed = lsbi_embed,
+    .extract = lsbi_extract,
 };
