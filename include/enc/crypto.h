@@ -12,7 +12,7 @@ typedef enum
     CRYPTO_AES192,
     CRYPTO_AES256,
     CRYPTO_3DES,
-} crypto_algo_t;
+} CryptoAlgo;
 
 typedef enum
 {
@@ -22,25 +22,25 @@ typedef enum
     CRYPTO_CFB,
     CRYPTO_OFB,
     CRYPTO_CBC,
-} crypto_mode_t;
+} CryptoMode;
 
 typedef struct
 {
-    crypto_algo_t algo;
-    crypto_mode_t mode;
+    CryptoAlgo algo;
+    CryptoMode mode;
     const char *password;
-} crypto_params_t;
+} CryptoParams;
 
-crypto_algo_t crypto_algo_from_str(const char *s);
-crypto_mode_t crypto_mode_from_str(const char *s);
+CryptoAlgo crypto_algo_from_str(const char *s);
+CryptoMode crypto_mode_from_str(const char *s);
 
-int crypto_enabled(const crypto_params_t *p);
-void crypto_apply_defaults(crypto_params_t *p);
+int crypto_enabled(const CryptoParams *p);
+void crypto_apply_defaults(CryptoParams *p);
 
-int crypto_encrypt(const crypto_params_t *p, const uint8_t *in, size_t in_len, uint8_t **out,
+int crypto_encrypt(const CryptoParams *p, const uint8_t *in, size_t in_len, uint8_t **out,
                    size_t *out_len);
 
-int crypto_decrypt(const crypto_params_t *p, const uint8_t *in, size_t in_len, uint8_t **out,
+int crypto_decrypt(const CryptoParams *p, const uint8_t *in, size_t in_len, uint8_t **out,
                    size_t *out_len);
 
 #endif

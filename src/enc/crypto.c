@@ -11,7 +11,7 @@
 #define PBKDF2_ITERATIONS 10000
 #define PBKDF2_SALT_LEN 8
 
-static const EVP_CIPHER *get_aes128(crypto_mode_t mode)
+static const EVP_CIPHER *get_aes128(CryptoMode mode)
 {
     switch (mode)
     {
@@ -28,7 +28,7 @@ static const EVP_CIPHER *get_aes128(crypto_mode_t mode)
     }
 }
 
-static const EVP_CIPHER *get_aes192(crypto_mode_t mode)
+static const EVP_CIPHER *get_aes192(CryptoMode mode)
 {
     switch (mode)
     {
@@ -45,7 +45,7 @@ static const EVP_CIPHER *get_aes192(crypto_mode_t mode)
     }
 }
 
-static const EVP_CIPHER *get_aes256(crypto_mode_t mode)
+static const EVP_CIPHER *get_aes256(CryptoMode mode)
 {
     switch (mode)
     {
@@ -63,7 +63,7 @@ static const EVP_CIPHER *get_aes256(crypto_mode_t mode)
 }
 
 /* des_ede3 is three-key 3DES; des_ede would be two-key. */
-static const EVP_CIPHER *get_3des(crypto_mode_t mode)
+static const EVP_CIPHER *get_3des(CryptoMode mode)
 {
     switch (mode)
     {
@@ -81,7 +81,7 @@ static const EVP_CIPHER *get_3des(crypto_mode_t mode)
 }
 
 /* CFB is 8-bit feedback (cfb8) and OFB is 128-bit. */
-static const EVP_CIPHER *get_cipher(const crypto_params_t *p)
+static const EVP_CIPHER *get_cipher(const CryptoParams *p)
 {
     switch (p->algo)
     {
@@ -113,7 +113,7 @@ static int derive_key_iv(const char *password, const EVP_CIPHER *cipher, uint8_t
 }
 
 /* enc is 1 to encrypt and 0 to decrypt, as in EVP_CipherInit_ex. */
-static int run_cipher(const crypto_params_t *p, int enc, const uint8_t *in, size_t in_len,
+static int run_cipher(const CryptoParams *p, int enc, const uint8_t *in, size_t in_len,
                       uint8_t **out, size_t *out_len)
 {
     const char *action = enc ? "encryption" : "decryption";
@@ -169,19 +169,19 @@ cleanup:
     return ret;
 }
 
-int crypto_encrypt(const crypto_params_t *p, const uint8_t *in, size_t in_len, uint8_t **out,
+int crypto_encrypt(const CryptoParams *p, const uint8_t *in, size_t in_len, uint8_t **out,
                    size_t *out_len)
 {
     return run_cipher(p, 1, in, in_len, out, out_len);
 }
 
-int crypto_decrypt(const crypto_params_t *p, const uint8_t *in, size_t in_len, uint8_t **out,
+int crypto_decrypt(const CryptoParams *p, const uint8_t *in, size_t in_len, uint8_t **out,
                    size_t *out_len)
 {
     return run_cipher(p, 0, in, in_len, out, out_len);
 }
 
-crypto_algo_t crypto_algo_from_str(const char *s)
+CryptoAlgo crypto_algo_from_str(const char *s)
 {
     if (strcmp(s, "aes128") == 0)
         return CRYPTO_AES128;
@@ -194,7 +194,7 @@ crypto_algo_t crypto_algo_from_str(const char *s)
     return CRYPTO_ALGO_INVALID;
 }
 
-crypto_mode_t crypto_mode_from_str(const char *s)
+CryptoMode crypto_mode_from_str(const char *s)
 {
     if (strcmp(s, "ecb") == 0)
         return CRYPTO_ECB;
@@ -207,12 +207,12 @@ crypto_mode_t crypto_mode_from_str(const char *s)
     return CRYPTO_MODE_INVALID;
 }
 
-int crypto_enabled(const crypto_params_t *p)
+int crypto_enabled(const CryptoParams *p)
 {
     return p->password != NULL;
 }
 
-void crypto_apply_defaults(crypto_params_t *p)
+void crypto_apply_defaults(CryptoParams *p)
 {
     if (!crypto_enabled(p))
     {
