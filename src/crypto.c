@@ -1,8 +1,11 @@
 #include "crypto.h"
 
+#include <limits.h>
+#include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define PBKDF2_ITERATIONS 10000
@@ -107,6 +110,75 @@ static int derive_key_iv(const char *password, const EVP_CIPHER *cipher, uint8_t
         return -1;
     }
     return 0;
+}
+
+/* enc is 1 to encrypt and 0 to decrypt, as in EVP_CipherInit_ex. */
+static int run_cipher(const crypto_params_t *p, int enc, const uint8_t *in, size_t in_len,
+                      uint8_t **out, size_t *out_len)
+{
+    const char *action = enc ? "encryption" : "decryption";
+    uint8_t key_iv[EVP_MAX_KEY_LENGTH + EVP_MAX_IV_LENGTH];
+    EVP_CIPHER_CTX *ctx = NULL;
+    uint8_t *buf = NULL;
+    int update_len = 0;
+    int final_len = 0;
+    int ret = -1;
+
+    const EVP_CIPHER *cipher = get_cipher(p);
+    if (cipher == NULL)
+    {
+        fprintf(stderr, "stegobmp: invalid algorithm or mode\n");
+        return -1;
+    }
+    /* EVP_CipherUpdate takes an int length. */
+    if (in_len > INT_MAX - EVP_MAX_BLOCK_LENGTH)
+    {
+        fprintf(stderr, "stegobmp: data too large for %s\n", action);
+        return -1;
+    }
+    if (derive_key_iv(p->password, cipher, key_iv) != 0)
+        return -1;
+
+    buf = malloc(in_len + EVP_CIPHER_block_size(cipher));
+    ctx = EVP_CIPHER_CTX_new();
+    if (buf == NULL || ctx == NULL)
+    {
+        fprintf(stderr, "stegobmp: out of memory\n");
+        goto cleanup;
+    }
+
+    const uint8_t *key = key_iv;
+    const uint8_t *iv = key_iv + EVP_CIPHER_key_length(cipher);
+    if (!EVP_CipherInit_ex(ctx, cipher, NULL, key, iv, enc) ||
+        !EVP_CipherUpdate(ctx, buf, &update_len, in, (int)in_len) ||
+        !EVP_CipherFinal_ex(ctx, buf + update_len, &final_len))
+    {
+        fprintf(stderr, "stegobmp: %s failed\n", action);
+        goto cleanup;
+    }
+
+    *out = buf;
+    *out_len = (size_t)update_len + (size_t)final_len;
+    buf = NULL;
+    ret = 0;
+
+cleanup:
+    OPENSSL_cleanse(key_iv, sizeof(key_iv));
+    EVP_CIPHER_CTX_free(ctx);
+    free(buf);
+    return ret;
+}
+
+int crypto_encrypt(const crypto_params_t *p, const uint8_t *in, size_t in_len, uint8_t **out,
+                   size_t *out_len)
+{
+    return run_cipher(p, 1, in, in_len, out, out_len);
+}
+
+int crypto_decrypt(const crypto_params_t *p, const uint8_t *in, size_t in_len, uint8_t **out,
+                   size_t *out_len)
+{
+    return run_cipher(p, 0, in, in_len, out, out_len);
 }
 
 crypto_algo_t crypto_algo_from_str(const char *s)
