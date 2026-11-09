@@ -9,9 +9,10 @@ BIN := $(BIN_DIR)/$(NAME)
 
 SRCS := $(shell find $(SRC_DIR) -name '*.c')
 OBJS := $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
+DEPS := $(OBJS:.o=.d)
 
 CFLAGS ?= -O2 -g
-CFLAGS += -std=c99 -Wall -Wextra -I$(INC_DIR)
+CFLAGS += -std=c99 -Wall -Wextra -I$(INC_DIR) -MMD -MP
 LDLIBS := -lcrypto
 
 .PHONY: all debug clean
@@ -32,4 +33,6 @@ debug: clean $(BIN)
 
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
+
+-include $(DEPS)
 
