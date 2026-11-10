@@ -7,6 +7,7 @@
 - Arcodaci, Tiziano - 64637
 - Carranza, Máximo Daniel - 64538
 - Lee, Sebastián Nicolás
+- Villanueva, Julia - 69619
 
 ## Devs
 
