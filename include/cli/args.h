@@ -1,29 +1,33 @@
+
 #ifndef ARGS_H
 #define ARGS_H
 
-// Operaciones que puede realizar el programa
-typedef enum {
+#include "enc/crypto.h"
+#include "steg/steg.h"
+
+// Operaciones disponibles
+typedef enum
+{
     OP_EMBED,
     OP_EXTRACT
 } operation_t;
 
-// Argumentos introducidos por el usuario
-typedef struct {
+// Argumentos del programa
+typedef struct
+{
     operation_t operation;
 
     const char *input_file;
     const char *carrier_file;
     const char *output_file;
 
-    const char *steg_algorithm;
-
-    const char *crypto_algorithm;
-    const char *crypto_mode;
-    const char *password;
+    StegAlgo steg_algorithm;
+    CryptoParams crypto;
 
 } args_t;
 
-// Lee y valida los argumentos de la terminal
+// Lee y valida los argumentos de la terminal.
+// Devuelve 0 si son correctos y -1 si hay un error.
 int args_parse(int argc, const char *argv[], args_t *args);
 
 #endif
