@@ -2,8 +2,9 @@
 
 #include <string.h>
 
-#define BMP_HEADER_SIZE 54
-#define BMP_INFO_HEADER_SIZE 40
+#define BMP_FILE_HEADER_SIZE 14
+#define BMP_MIN_HEADER_SIZE 54
+#define BMP_MIN_INFO_HEADER_SIZE 40
 #define BMP_BITS_PER_PIXEL 24
 #define BMP_NO_COMPRESSION 0
 
@@ -31,25 +32,36 @@ BmpResult bmp_parse(uint8_t *data, size_t size, Bmp *bmp)
 
     memset(bmp, 0, sizeof(*bmp));
 
+    uint32_t pixels_offset;
+    uint32_t info_header_size;
+
     // https://en.wikipedia.org/wiki/BMP_file_format#File_headers
-    if (size <= BMP_HEADER_SIZE || data[0] != 'B' || data[1] != 'M')
+    if (size <= BMP_MIN_HEADER_SIZE || data[0] != 'B' || data[1] != 'M')
     {
         return BMP_ERR_INVALID;
     }
 
-    // only plain V3 files: 54 byte header, pixels right after it
-    if (read_le32(data + BMP_OFFSET_PIXELS) != BMP_HEADER_SIZE ||
-        read_le32(data + BMP_OFFSET_INFO_HEADER_SIZE) != BMP_INFO_HEADER_SIZE ||
+    // frozen.bmp has a V5 header (124 bytes), so the pixels start where the file says, not at 54
+    info_header_size = read_le32(data + BMP_OFFSET_INFO_HEADER_SIZE);
+    pixels_offset = read_le32(data + BMP_OFFSET_PIXELS);
+
+    if (info_header_size < BMP_MIN_INFO_HEADER_SIZE ||
         read_le16(data + BMP_OFFSET_BITS_PER_PIXEL) != BMP_BITS_PER_PIXEL ||
         read_le32(data + BMP_OFFSET_COMPRESSION) != BMP_NO_COMPRESSION)
     {
         return BMP_ERR_UNSUPPORTED;
     }
 
+    if (info_header_size > size - BMP_FILE_HEADER_SIZE ||
+        pixels_offset < BMP_FILE_HEADER_SIZE + info_header_size || pixels_offset >= size)
+    {
+        return BMP_ERR_INVALID;
+    }
+
     bmp->data = data;
     bmp->size = size;
-    bmp->body = data + BMP_HEADER_SIZE;
-    bmp->body_len = size - BMP_HEADER_SIZE;
+    bmp->body = data + pixels_offset;
+    bmp->body_len = size - pixels_offset;
 
     return BMP_OK;
 }
@@ -65,7 +77,7 @@ const char *bmp_error_string(BmpResult result)
     case BMP_ERR_INVALID:
         return "not a valid BMP file";
     case BMP_ERR_UNSUPPORTED:
-        return "unsupported BMP (uncompressed 24-bit v3 required)";
+        return "unsupported BMP (uncompressed 24-bit required)";
     default:
         return "unknown error";
     }
