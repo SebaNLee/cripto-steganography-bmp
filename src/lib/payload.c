@@ -307,6 +307,12 @@ PayloadResult payload_decode(const uint8_t *blob, size_t blob_len, const CryptoP
     result = payload_parse_plain(plain, plain_len, payload);
     free(plain);
 
+    // cfb and ofb never fail to decrypt, so a wrong password only shows up as a bad format
+    if (result == PAYLOAD_ERR_INVALID)
+    {
+        return PAYLOAD_ERR_CRYPTO;
+    }
+
     return result;
 }
 
