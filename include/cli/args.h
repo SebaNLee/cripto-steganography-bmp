@@ -12,6 +12,16 @@ typedef enum
     OP_EXTRACT
 } operation_t;
 
+typedef enum
+{
+    ARGS_OK = 0,
+    ARGS_ERR_OPERATION,
+    ARGS_ERR_UNKNOWN_OPTION,
+    ARGS_ERR_MISSING_VALUE,
+    ARGS_ERR_INVALID_VALUE,
+    ARGS_ERR_MISSING_REQUIRED
+} args_result_t;
+
 // Argumentos del programa
 typedef struct
 {
@@ -26,8 +36,8 @@ typedef struct
 
 } args_t;
 
-// Lee y valida los argumentos de la terminal.
-// Devuelve 0 si son correctos y -1 si hay un error.
-int args_parse(int argc, const char *argv[], args_t *args);
+args_result_t args_parse(int argc, const char *argv[], args_t *args);
+
+const char *args_error_string(args_result_t result);
 
 #endif
