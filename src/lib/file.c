@@ -24,9 +24,19 @@ FileResult file_read_all(const char *path, uint8_t **out, size_t *out_len)
         return FILE_ERR_IO;
     }
 
-    fseek(file, 0, SEEK_END);
+    // seeking fails on directories and pipes, which have no usable size
+    if (fseek(file, 0, SEEK_END) != 0)
+    {
+        fclose(file);
+        return FILE_ERR_IO;
+    }
+
     end = ftell(file);
-    fseek(file, 0, SEEK_SET);
+    if (end < 0 || fseek(file, 0, SEEK_SET) != 0)
+    {
+        fclose(file);
+        return FILE_ERR_IO;
+    }
 
     size = (size_t)end;
     buf = malloc(size);
