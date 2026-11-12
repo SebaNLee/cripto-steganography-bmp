@@ -1,72 +1,218 @@
-#include "lib/bit.h"
+#include "cli/args.h"
+#include "lib/bmp.h"
+#include "lib/file.h"
+#include "lib/payload.h"
 #include "steg/steg.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+static char *path_with_extension(const char *path, const char *extension)
+{
+    size_t path_len = strlen(path);
+    size_t ext_len = strlen(extension);
+    char *result;
+
+    if (path_len >= ext_len && strcmp(path + path_len - ext_len, extension) == 0)
+    {
+        result = malloc(path_len + 1);
+        if (result != NULL)
+        {
+            memcpy(result, path, path_len + 1);
+        }
+
+        return result;
+    }
+
+    result = malloc(path_len + ext_len + 1);
+    if (result == NULL)
+    {
+        return NULL;
+    }
+
+    memcpy(result, path, path_len);
+    memcpy(result + path_len, extension, ext_len + 1);
+
+    return result;
+}
+
+static int run_embed(const args_t *args)
+{
+    uint8_t *secret = NULL;
+    size_t secret_len = 0;
+    uint8_t *blob = NULL;
+    size_t blob_len = 0;
+    uint8_t *bmp_data = NULL;
+    size_t bmp_size = 0;
+    Bmp bmp;
+    FileResult file_result;
+    PayloadResult payload_result;
+    BmpResult bmp_result;
+    StegResult steg_result;
+    size_t capacity;
+    int status = 1;
+
+    file_result = file_read_all(args->input_file, &secret, &secret_len);
+    if (file_result != FILE_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", args->input_file, file_error_string(file_result));
+        goto cleanup;
+    }
+
+    payload_result = payload_encode(secret, secret_len, args->input_file, &args->crypto, &blob, &blob_len);
+    if (payload_result != PAYLOAD_OK)
+    {
+        fprintf(stderr, "error: %s\n", payload_error_string(payload_result));
+        goto cleanup;
+    }
+
+    file_result = file_read_all(args->carrier_file, &bmp_data, &bmp_size);
+    if (file_result != FILE_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", args->carrier_file, file_error_string(file_result));
+        goto cleanup;
+    }
+
+    bmp_result = bmp_parse(bmp_data, bmp_size, &bmp);
+    if (bmp_result != BMP_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", args->carrier_file, bmp_error_string(bmp_result));
+        goto cleanup;
+    }
+
+    capacity = steg_capacity(args->steg_algorithm, bmp.body_len);
+    if (blob_len > capacity)
+    {
+        fprintf(stderr,
+                "error: payload too large: %zu bytes required, maximum capacity: %zu bytes\n", blob_len, capacity);
+        goto cleanup;
+    }
+
+    steg_result = steg_embed(args->steg_algorithm, bmp.body, bmp.body_len, blob, blob_len);
+    if (steg_result != STEG_OK)
+    {
+        fprintf(stderr, "error: %s\n", steg_error_string(steg_result));
+        goto cleanup;
+    }
+
+    file_result = file_write_all(args->output_file, bmp.data, bmp.size);
+    if (file_result != FILE_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", args->output_file, file_error_string(file_result));
+        goto cleanup;
+    }
+
+    status = 0;
+
+cleanup:
+    free(blob);
+    free(secret);
+    free(bmp_data);
+    return status;
+}
+
+static int run_extract(const args_t *args)
+{
+    uint8_t *bmp_data = NULL;
+    size_t bmp_size = 0;
+    uint8_t *blob = NULL;
+    Payload payload = {0};
+    char *out_path = NULL;
+    Bmp bmp;
+    FileResult file_result;
+    BmpResult bmp_result;
+    StegResult steg_result;
+    PayloadResult payload_result;
+    size_t capacity;
+    int status = 1;
+
+    file_result = file_read_all(args->carrier_file, &bmp_data, &bmp_size);
+    if (file_result != FILE_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", args->carrier_file, file_error_string(file_result));
+        goto cleanup;
+    }
+
+    bmp_result = bmp_parse(bmp_data, bmp_size, &bmp);
+    if (bmp_result != BMP_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", args->carrier_file, bmp_error_string(bmp_result));
+        goto cleanup;
+    }
+
+    capacity = steg_capacity(args->steg_algorithm, bmp.body_len);
+    if (capacity < 4)
+    {
+        fprintf(stderr, "error: bmp is too small to contain a payload\n");
+        goto cleanup;
+    }
+
+    blob = malloc(capacity);
+    if (blob == NULL)
+    {
+        fprintf(stderr, "error: out of memory\n");
+        goto cleanup;
+    }
+
+    steg_result = steg_extract(args->steg_algorithm, bmp.body, bmp.body_len, blob, capacity);
+    if (steg_result != STEG_OK)
+    {
+        fprintf(stderr, "error: %s\n", steg_error_string(steg_result));
+        goto cleanup;
+    }
+
+    payload_result = payload_decode(blob, capacity, &args->crypto, &payload);
+    if (payload_result != PAYLOAD_OK)
+    {
+        fprintf(stderr, "error: %s\n", payload_error_string(payload_result));
+        goto cleanup;
+    }
+
+    out_path = path_with_extension(args->output_file, payload.extension);
+    if (out_path == NULL)
+    {
+        fprintf(stderr, "error: out of memory\n");
+        goto cleanup;
+    }
+
+    file_result = file_write_all(out_path, payload.data, payload.data_len);
+    if (file_result != FILE_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", out_path, file_error_string(file_result));
+        goto cleanup;
+    }
+
+    status = 0;
+
+cleanup:
+    free(out_path);
+    payload_free(&payload);
+    free(blob);
+    free(bmp_data);
+    return status;
+}
 
 int main(int argc, char const *argv[])
 {
-    // TODO: orquestacion de -embed, -extract, cli, enc, etc
+    args_t args;
+    args_result_t args_result = args_parse(argc, argv, &args);
 
-    // embed:   read_file -> payload_encode -> bmp_load -> steg_capacity (chequeo) -> steg_embed -> bmp_save
-    // extract: bmp_load -> steg_extract(4) -> payload_declared_size -> steg_extract(4+n) -> payload_decode -> write_file(out + ext)
+    if (args_result != ARGS_OK)
+    {
+        fprintf(stderr, "error: %s\n", args_error_string(args_result));
+        return 1;
+    }
 
-    /* TODO: cableado
-     *
-     * payload = formato del mensaje oculto  (BE32 || datos || .ext, + cifrado), usa lib de cifrado si se pide
-     * steg    = mapeo de esos bytes al cuerpo del bmp (bits, canales, patrones)
-     *
-     * embed:   read_file(-in)                 -> secret
-     *          payload_encode(secret, enc)    -> blob   (formato, no toca el bmp)
-     *          bmp_load(-p)                   -> bmp
-     *          steg_capacity >= blob_len         (chequeo antes de escribir)
-     *          steg_embed(algo, bmp, blob)       (bits sobre el cuerpo)
-     *          bmp_save(-out)
-     *
-     * extract: bmp_load(-p)                   -> bmp
-     *          steg_extract(4)                -> head
-     *          payload_blob_len(head)         -> total = 4 + n
-     *          steg_extract(total)            -> all
-     *          payload_decode(all, enc)       -> secret + ext
-     *          write_file(out + ext)
-     *
-     * reglas: solo main imprime; main libera; capacidad antes de escribir.
-     */
+    if (crypto_options_ignored(&args.crypto))
+    {
+        fprintf(stderr, "warning: -a/-m ignored without -pass\n");
+    }
 
-    // TODO delete bit lib test
-    (void)argc;
-    (void)argv;
-    uint8_t temp[4];
-    be32_write(temp, 0x00CACA);
-    printf("be32: %08X (should be 0000CACA)\n", (unsigned)be32_read(temp));
-    printf("lsb: %u (should be 1)\n", lsb_get(lsb_set(0xAA, 1)));
-    printf("nibble: %02X (should be A5)\n", (unsigned)low_nibble_set(0xAB, 0x05));
-    printf("bit3: %u (should be 1)\n", bit_get(bit_set(0x00, 3, 1), 3));
-    // TODO delete bit lib test
+    if (args.operation == OP_EMBED)
+    {
+        return run_embed(&args);
+    }
 
-    // TODO test steg
-    uint8_t body[256];
-    uint8_t data[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
-    uint8_t out[8];
-
-    memset(body, 0, sizeof(body));
-    memset(out, 0, sizeof(out));
-    steg_embed(LSB1, body, sizeof(body), data, sizeof(data));
-    steg_extract(LSB1, body, sizeof(body), out, sizeof(out));
-    printf("LSB1: %d (should be 1)\n", memcmp(data, out, sizeof(data)) == 0);
-
-    memset(body, 0, sizeof(body));
-    memset(out, 0, sizeof(out));
-    steg_embed(LSB4, body, sizeof(body), data, sizeof(data));
-    steg_extract(LSB4, body, sizeof(body), out, sizeof(out));
-    printf("LSB4: %d (should be 1)\n", memcmp(data, out, sizeof(data)) == 0);
-
-    memset(body, 0, sizeof(body));
-    memset(out, 0, sizeof(out));
-    steg_embed(LSBI, body, sizeof(body), data, sizeof(data));
-    steg_extract(LSBI, body, sizeof(body), out, sizeof(out));
-    printf("LSBI: %d (should be 1)\n", memcmp(data, out, sizeof(data)) == 0);
-    // TODO test steg
-
-    return 0;
+    return run_extract(&args);
 }
