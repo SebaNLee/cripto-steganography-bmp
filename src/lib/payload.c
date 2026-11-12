@@ -6,8 +6,8 @@
 
 #define PAYLOAD_HEADER_SIZE 4
 
-// sin cifrado: BE32(tamaño real) || datos archivo || extensión
-// con cifrado: BE32(tamaño cifrado) || encriptación(tamaño real || datos archivo || extensión)
+// plain:     BE32(real size) || file data || extension
+// encrypted: BE32(cipher size) || encrypt(BE32(real size) || file data || extension)
 
 static int payload_crypto_enabled(const CryptoParams *crypto)
 {
@@ -108,7 +108,6 @@ static PayloadResult payload_parse_plain(const uint8_t *plain, size_t plain_len,
         return PAYLOAD_ERR_INVALID;
     }
 
-    // formato plano: BE32(tamaño real) || datos archivo || extensión
     if (payload_declared_len(plain, plain_len, &data_len) != PAYLOAD_OK)
     {
         return PAYLOAD_ERR_INVALID;
@@ -203,7 +202,6 @@ PayloadResult payload_encode(const uint8_t *data, size_t data_len, const char *i
         return result;
     }
 
-    // sin cifrado: BE32(tamaño real) || datos archivo || extensión
     plain = malloc(plain_len);
 
     if (plain == NULL)
@@ -227,7 +225,6 @@ PayloadResult payload_encode(const uint8_t *data, size_t data_len, const char *i
         return PAYLOAD_OK;
     }
 
-    // con cifrado: BE32(tamaño cifrado) || encriptación(bloque plano)
     crypto_res = crypto_encrypt(crypto, plain, plain_len, &cipher, &cipher_len);
     free(plain);
 
@@ -282,11 +279,9 @@ PayloadResult payload_decode(const uint8_t *blob, size_t blob_len, const CryptoP
 
     if (!payload_crypto_enabled(crypto))
     {
-        // sin cifrado: BE32(tamaño real) || datos archivo || extensión
         return payload_parse_plain(blob, blob_len, payload);
     }
 
-    // con cifrado: BE32(tamaño cifrado) || encriptación(tamaño real || datos || extensión)
     result = payload_declared_len(blob, blob_len, &declared);
     if (result != PAYLOAD_OK)
     {

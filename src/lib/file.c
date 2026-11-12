@@ -18,7 +18,7 @@ FileResult file_read_all(const char *path, uint8_t **out, size_t *out_len)
     *out = NULL;
     *out_len = 0;
 
-    file = fopen(path, "rb"); // binary mode read
+    file = fopen(path, "rb");
     if (file == NULL)
     {
         return FILE_ERR_IO;
@@ -75,7 +75,7 @@ FileResult file_write_all(const char *path, const uint8_t *data, size_t len)
         return FILE_ERR_INVALID_ARG;
     }
 
-    file = fopen(path, "wb"); // binary write mode
+    file = fopen(path, "wb");
     if (file == NULL)
     {
         return FILE_ERR_IO;
