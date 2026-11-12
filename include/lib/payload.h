@@ -23,9 +23,9 @@ typedef struct
     char extension[PAYLOAD_EXT_MAX];
 } Payload;
 
-PayloadResult payload_encode(const uint8_t *data, size_t data_len, const char *input_path, const CryptoParams *crypto, uint8_t **out, size_t *out_len, CryptoResult *crypto_result);
+PayloadResult payload_encode(const uint8_t *data, size_t data_len, const char *input_path, const CryptoParams *crypto, uint8_t **out, size_t *out_len);
 
-PayloadResult payload_decode(const uint8_t *blob, size_t blob_len, const CryptoParams *crypto, Payload *payload, CryptoResult *crypto_result);
+PayloadResult payload_decode(const uint8_t *blob, size_t blob_len, const CryptoParams *crypto, Payload *payload);
 
 void payload_free(Payload *payload);
 
