@@ -8,7 +8,8 @@ typedef enum
 {
     BMP_OK = 0,
     BMP_ERR_INVALID_ARG,
-    BMP_ERR_INVALID
+    BMP_ERR_INVALID,
+    BMP_ERR_UNSUPPORTED
 } BmpResult;
 
 typedef struct
