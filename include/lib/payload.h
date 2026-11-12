@@ -13,7 +13,8 @@ typedef enum
     PAYLOAD_OK = 0,
     PAYLOAD_ERR_INVALID,
     PAYLOAD_ERR_NO_MEMORY,
-    PAYLOAD_ERR_CRYPTO
+    PAYLOAD_ERR_CRYPTO,
+    PAYLOAD_ERR_NO_EXTENSION
 } PayloadResult;
 
 typedef struct

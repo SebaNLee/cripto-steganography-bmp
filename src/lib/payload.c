@@ -81,7 +81,7 @@ static PayloadResult payload_extension_from_path(const char *path, char *extensi
 
     if (dot == NULL || dot == base || dot[1] == '\0')
     {
-        return PAYLOAD_ERR_INVALID;
+        return PAYLOAD_ERR_NO_EXTENSION;
     }
 
     len = strlen(dot);
@@ -339,6 +339,8 @@ const char *payload_error_string(PayloadResult result)
         return "out of memory";
     case PAYLOAD_ERR_CRYPTO:
         return "encryption or decryption failed (check password, algorithm and mode)";
+    case PAYLOAD_ERR_NO_EXTENSION:
+        return "the file to hide needs an extension (e.g. .txt)";
     default:
         return "unknown error";
     }
