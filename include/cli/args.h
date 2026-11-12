@@ -1,16 +1,14 @@
-
 #ifndef ARGS_H
 #define ARGS_H
 
 #include "enc/crypto.h"
 #include "steg/steg.h"
 
-// Operaciones disponibles
 typedef enum
 {
     OP_EMBED,
     OP_EXTRACT
-} operation_t;
+} Operation;
 
 typedef enum
 {
@@ -19,13 +17,13 @@ typedef enum
     ARGS_ERR_UNKNOWN_OPTION,
     ARGS_ERR_MISSING_VALUE,
     ARGS_ERR_INVALID_VALUE,
+    ARGS_ERR_DUPLICATE_OPTION,
     ARGS_ERR_MISSING_REQUIRED
-} args_result_t;
+} ArgsResult;
 
-// Argumentos del programa
 typedef struct
 {
-    operation_t operation;
+    Operation operation;
 
     const char *input_file;
     const char *carrier_file;
@@ -34,10 +32,15 @@ typedef struct
     StegAlgo steg_algorithm;
     CryptoParams crypto;
 
-} args_t;
+    const char *bad_option;
+    const char *bad_value;
 
-args_result_t args_parse(int argc, const char *argv[], args_t *args);
+} Args;
 
-const char *args_error_string(args_result_t result);
+ArgsResult args_parse(int argc, const char *argv[], Args *args);
+
+const char *args_error_string(ArgsResult result);
+
+const char *args_usage(void);
 
 #endif
