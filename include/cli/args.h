@@ -19,6 +19,7 @@ typedef enum
     ARGS_ERR_UNKNOWN_OPTION,
     ARGS_ERR_MISSING_VALUE,
     ARGS_ERR_INVALID_VALUE,
+    ARGS_ERR_DUPLICATE_OPTION,
     ARGS_ERR_MISSING_REQUIRED
 } args_result_t;
 
@@ -34,10 +35,15 @@ typedef struct
     StegAlgo steg_algorithm;
     CryptoParams crypto;
 
+    const char *bad_option;
+    const char *bad_value;
+
 } args_t;
 
 args_result_t args_parse(int argc, const char *argv[], args_t *args);
 
 const char *args_error_string(args_result_t result);
+
+const char *args_usage(void);
 
 #endif

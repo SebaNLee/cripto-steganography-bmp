@@ -193,6 +193,26 @@ cleanup:
     return status;
 }
 
+static void print_args_error(const args_t *args, args_result_t result)
+{
+    fprintf(stderr, "error: %s", args_error_string(result));
+
+    if (args->bad_option != NULL)
+    {
+        fprintf(stderr, " (%s", args->bad_option);
+
+        // never echo a password back to the terminal
+        if (args->bad_value != NULL && strcmp(args->bad_option, "-pass") != 0)
+        {
+            fprintf(stderr, " %s", args->bad_value);
+        }
+
+        fprintf(stderr, ")");
+    }
+
+    fprintf(stderr, "\n%s", args_usage());
+}
+
 int main(int argc, char const *argv[])
 {
     args_t args;
@@ -200,7 +220,7 @@ int main(int argc, char const *argv[])
 
     if (args_result != ARGS_OK)
     {
-        fprintf(stderr, "error: %s\n", args_error_string(args_result));
+        print_args_error(&args, args_result);
         return 1;
     }
 
