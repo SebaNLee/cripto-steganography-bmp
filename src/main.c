@@ -37,7 +37,7 @@ static char *path_with_extension(const char *path, const char *extension)
     return result;
 }
 
-static int run_embed(const args_t *args)
+static int run_embed(const Args *args)
 {
     uint8_t *secret = NULL;
     size_t secret_len = 0;
@@ -112,7 +112,7 @@ cleanup:
     return status;
 }
 
-static int run_extract(const args_t *args)
+static int run_extract(const Args *args)
 {
     uint8_t *bmp_data = NULL;
     size_t bmp_size = 0;
@@ -193,7 +193,7 @@ cleanup:
     return status;
 }
 
-static void print_args_error(const args_t *args, args_result_t result)
+static void print_args_error(const Args *args, ArgsResult result)
 {
     fprintf(stderr, "error: %s", args_error_string(result));
 
@@ -215,8 +215,8 @@ static void print_args_error(const args_t *args, args_result_t result)
 
 int main(int argc, char const *argv[])
 {
-    args_t args;
-    args_result_t args_result = args_parse(argc, argv, &args);
+    Args args;
+    ArgsResult args_result = args_parse(argc, argv, &args);
 
     if (args_result != ARGS_OK)
     {

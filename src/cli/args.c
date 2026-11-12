@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <string.h>
 
-// Sintaxis del programa
 #define ARGS_USAGE                                                            \
     "Usage:\n"                                                                \
     "  stegobmp -embed -in <file> -p <bitmap.bmp> -out <bitmap.bmp> "         \
@@ -13,13 +12,12 @@
     "[-a <aes128|aes192|aes256|3des>] [-m <ecb|cfb|ofb|cbc>] "                \
     "[-pass <password>]\n"
 
-// Comprueba que una opcion tenga un valor valido
 static int valid_value(const char *value)
 {
     return value != NULL && value[0] != '\0' && value[0] != '-';
 }
 
-static args_result_t fail(args_t *args, args_result_t result, const char *option, const char *value)
+static ArgsResult fail(Args *args, ArgsResult result, const char *option, const char *value)
 {
     args->bad_option = option;
     args->bad_value = value;
@@ -27,15 +25,13 @@ static args_result_t fail(args_t *args, args_result_t result, const char *option
     return result;
 }
 
-// Lee y valida los argumentos introducidos por el usuario
-args_result_t args_parse(int argc, const char *argv[], args_t *args)
+ArgsResult args_parse(int argc, const char *argv[], Args *args)
 {
     if (args == NULL)
     {
         return ARGS_ERR_OPERATION;
     }
 
-    // Inicializamos todos los campos
     memset(args, 0, sizeof(*args));
 
     if (argv == NULL || argc < 2 || argv[1] == NULL)
@@ -46,7 +42,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
     args->crypto.algo = CRYPTO_ALGO_UNSET;
     args->crypto.mode = CRYPTO_MODE_UNSET;
 
-    // Comprobamos la operacion
     if (strcmp(argv[1], "-embed") == 0)
     {
         args->operation = OP_EMBED;
@@ -60,7 +55,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
         return fail(args, ARGS_ERR_OPERATION, argv[1], NULL);
     }
 
-    // Controlamos si una opcion ya fue indicada
     int has_in = 0;
     int has_p = 0;
     int has_out = 0;
@@ -69,11 +63,8 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
     int has_mode = 0;
     int has_pass = 0;
 
-    // Recorremos los argumentos
     for (int i = 2; i < argc; i++)
     {
-
-        // Cada opcion debe tener un valor
         if (argv[i] == NULL || i + 1 >= argc)
         {
             return fail(args, ARGS_ERR_MISSING_VALUE, argv[i], NULL);
@@ -87,7 +78,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
         const char *option = argv[i];
         const char *value = argv[++i];
 
-        // Archivo que queremos ocultar
         if (strcmp(option, "-in") == 0)
         {
             if (has_in)
@@ -101,8 +91,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
             args->input_file = value;
             has_in = 1;
         }
-
-        // Imagen BMP portadora
         else if (strcmp(option, "-p") == 0)
         {
             if (has_p)
@@ -112,8 +100,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
             args->carrier_file = value;
             has_p = 1;
         }
-
-        // Archivo de salida
         else if (strcmp(option, "-out") == 0)
         {
             if (has_out)
@@ -123,8 +109,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
             args->output_file = value;
             has_out = 1;
         }
-
-        // Algoritmo de esteganografia
         else if (strcmp(option, "-steg") == 0)
         {
             if (has_steg)
@@ -151,8 +135,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
 
             has_steg = 1;
         }
-
-        // Algoritmo de cifrado
         else if (strcmp(option, "-a") == 0)
         {
             if (has_algo)
@@ -170,8 +152,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
 
             has_algo = 1;
         }
-
-        // Modo de cifrado
         else if (strcmp(option, "-m") == 0)
         {
             if (has_mode)
@@ -189,8 +169,6 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
 
             has_mode = 1;
         }
-
-        // Contrasena de cifrado
         else if (strcmp(option, "-pass") == 0)
         {
             if (has_pass)
@@ -201,15 +179,12 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
             args->crypto.password = value;
             has_pass = 1;
         }
-
-        // Opcion desconocida
         else
         {
             return fail(args, ARGS_ERR_UNKNOWN_OPTION, option, NULL);
         }
     }
 
-    // Comprobamos los argumentos obligatorios
     if (!has_p)
     {
         return fail(args, ARGS_ERR_MISSING_REQUIRED, "-p", NULL);
@@ -223,24 +198,21 @@ args_result_t args_parse(int argc, const char *argv[], args_t *args)
         return fail(args, ARGS_ERR_MISSING_REQUIRED, "-steg", NULL);
     }
 
-    // Para ocultar un archivo necesitamos -in
     if (args->operation == OP_EMBED && !has_in)
     {
         return fail(args, ARGS_ERR_MISSING_REQUIRED, "-in", NULL);
     }
 
-    // Aplicamos los valores por defecto del cifrado
-    // Solo se cifra cuando hay contrasena
+    // without a password nothing is encrypted, so there is nothing to default
     if (has_pass)
     {
         crypto_apply_defaults(&args->crypto);
     }
 
-    // Argumentos correctos
     return ARGS_OK;
 }
 
-const char *args_error_string(args_result_t result)
+const char *args_error_string(ArgsResult result)
 {
     switch (result)
     {
