@@ -7,7 +7,8 @@
 typedef enum
 {
     OP_EMBED,
-    OP_EXTRACT
+    OP_EXTRACT,
+    OP_ANALYZE
 } Operation;
 
 typedef enum
@@ -18,6 +19,7 @@ typedef enum
     ARGS_ERR_MISSING_VALUE,
     ARGS_ERR_INVALID_VALUE,
     ARGS_ERR_DUPLICATE_OPTION,
+    ARGS_ERR_NOT_ALLOWED,
     ARGS_ERR_MISSING_REQUIRED
 } ArgsResult;
 
