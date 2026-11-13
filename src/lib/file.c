@@ -39,7 +39,7 @@ FileResult file_read_all(const char *path, uint8_t **out, size_t *out_len)
     }
 
     size = (size_t)end;
-    buf = malloc(size);
+    buf = malloc(size > 0 ? size : 1);
 
     if (buf == NULL)
     {
