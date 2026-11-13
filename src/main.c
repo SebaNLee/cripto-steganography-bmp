@@ -284,6 +284,7 @@ static int run_analyze(const Args *args)
         if (analyze_result != ANALYZE_OK)
         {
             fprintf(stderr, "error: %s: %s\n", STEG_NAMES[algo], analyze_error_string(analyze_result));
+            analyze_finding_free(&finding);
             goto cleanup;
         }
 
