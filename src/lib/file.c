@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 FileResult file_read_all(const char *path, uint8_t **out, size_t *out_len)
 {
@@ -69,29 +71,53 @@ FileResult file_read_all(const char *path, uint8_t **out, size_t *out_len)
 FileResult file_write_all(const char *path, const uint8_t *data, size_t len)
 {
     FILE *file;
+    char *tmp_path;
+    size_t tmp_len;
 
     if (path == NULL || (len > 0 && data == NULL))
     {
         return FILE_ERR_INVALID_ARG;
     }
 
-    file = fopen(path, "wb");
+    tmp_len = strlen(path) + 16;
+    tmp_path = malloc(tmp_len);
+    if (tmp_path == NULL)
+    {
+        return FILE_ERR_NO_MEMORY;
+    }
+
+    snprintf(tmp_path, tmp_len, "%s.tmp.%u", path, (unsigned)getpid());
+
+    file = fopen(tmp_path, "wb");
     if (file == NULL)
     {
+        free(tmp_path);
         return FILE_ERR_IO;
     }
 
     if (len > 0 && fwrite(data, 1, len, file) != len)
     {
         fclose(file);
+        remove(tmp_path);
+        free(tmp_path);
         return FILE_ERR_IO;
     }
 
     if (fclose(file) != 0)
     {
+        remove(tmp_path);
+        free(tmp_path);
         return FILE_ERR_IO;
     }
 
+    if (rename(tmp_path, path) != 0)
+    {
+        remove(tmp_path);
+        free(tmp_path);
+        return FILE_ERR_IO;
+    }
+
+    free(tmp_path);
     return FILE_OK;
 }
 
