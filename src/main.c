@@ -252,6 +252,152 @@ static int save_finding(const char *base, const char *steg_name, const AnalyzeFi
     return 0;
 }
 
+static void escape_trailing_text(char *out, size_t out_len, const uint8_t *data, size_t len)
+{
+    size_t written = 0;
+
+    for (size_t i = 0; i < len && written + 1 < out_len; i++)
+    {
+        unsigned char c = data[i];
+
+        if (c == '"' || c == '\\')
+        {
+            if (written + 2 >= out_len)
+            {
+                break;
+            }
+            out[written++] = '\\';
+            out[written++] = (char)c;
+        }
+        else if (c == '\r')
+        {
+            if (written + 2 >= out_len)
+            {
+                break;
+            }
+            out[written++] = '\\';
+            out[written++] = 'r';
+        }
+        else if (c == '\n')
+        {
+            if (written + 2 >= out_len)
+            {
+                break;
+            }
+            out[written++] = '\\';
+            out[written++] = 'n';
+        }
+        else if (c == '\t')
+        {
+            if (written + 2 >= out_len)
+            {
+                break;
+            }
+            out[written++] = '\\';
+            out[written++] = 't';
+        }
+        else if (c >= 0x20 && c <= 0x7e)
+        {
+            out[written++] = (char)c;
+        }
+        else
+        {
+            if (written + 4 >= out_len)
+            {
+                break;
+            }
+            written += (size_t)snprintf(out + written, out_len - written, "\\x%02x", c);
+        }
+    }
+
+    out[written] = '\0';
+}
+
+static void print_trailing(const Bmp *bmp, const AnalyzeTrailing *trailing)
+{
+    size_t text_preview_len = trailing->length;
+    if (text_preview_len > 120)
+    {
+        text_preview_len = 120;
+    }
+
+    size_t hex_preview_len = trailing->length;
+    if (hex_preview_len > 32)
+    {
+        hex_preview_len = 32;
+    }
+
+    char *preview = malloc(text_preview_len * 4 + 1);
+    if (preview == NULL)
+    {
+        fprintf(stderr, "error: out of memory\n");
+        return;
+    }
+
+    printf("trailing data: %zu bytes at offset %zu\n", trailing->length, trailing->offset);
+
+    if (trailing->printable)
+    {
+        escape_trailing_text(preview, text_preview_len * 4 + 1, bmp->data + trailing->offset, text_preview_len);
+
+        if (trailing->length > 120)
+        {
+            preview[120] = '\0';
+            printf("  text: \"%s...\"\n", preview);
+        }
+        else
+        {
+            printf("  text: \"%s\"\n", preview);
+        }
+
+        free(preview);
+        return;
+    }
+
+    char *hex = malloc(hex_preview_len * 2 + 1);
+    if (hex != NULL)
+    {
+        for (size_t i = 0; i < hex_preview_len; i++)
+        {
+            snprintf(hex + i * 2, 3, "%02x", bmp->data[trailing->offset + i]);
+        }
+
+        hex[hex_preview_len * 2] = '\0';
+        printf("  first bytes: %s%s\n", hex, trailing->length > 32 ? "..." : "");
+        free(hex);
+    }
+
+    free(preview);
+}
+
+static int save_trailing(const char *base, const Bmp *bmp, const AnalyzeTrailing *trailing)
+{
+    size_t path_len = strlen(base) + strlen("_trailing.bin") + 1;
+    char *path = malloc(path_len);
+    FileResult file_result;
+
+    if (path == NULL)
+    {
+        fprintf(stderr, "error: out of memory\n");
+        return 1;
+    }
+
+    snprintf(path, path_len, "%s_trailing.bin", base);
+
+    file_result = file_write_all(path, bmp->data + trailing->offset, trailing->length);
+    if (file_result != FILE_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", path, file_error_string(file_result));
+        free(path);
+        return 1;
+    }
+
+    printf("  saved to %s\n", path);
+    free(path);
+
+    return 0;
+}
+
 static int run_analyze(const Args *args)
 {
     uint8_t *bmp_data = NULL;
@@ -273,6 +419,34 @@ static int run_analyze(const Args *args)
     {
         fprintf(stderr, "error: %s: %s\n", args->carrier_file, bmp_error_string(bmp_result));
         goto cleanup;
+    }
+
+    AnalyzeTrailing trailing;
+    AnalyzeResult trailing_result = analyze_trailing(&bmp, &trailing);
+
+    if (trailing_result != ANALYZE_OK)
+    {
+        fprintf(stderr, "error: trailing data: %s\n", analyze_error_string(trailing_result));
+        goto cleanup;
+    }
+
+    if (trailing.present)
+    {
+        print_trailing(&bmp, &trailing);
+
+        if (args->output_file != NULL)
+        {
+            if (save_trailing(args->output_file, &bmp, &trailing) != 0)
+            {
+                goto cleanup;
+            }
+        }
+    }
+
+    if (bmp.image_size != 0 && bmp.image_size != bmp.body_len)
+    {
+        fprintf(stderr, "warning: biSizeImage=%u does not match body length %zu\n",
+                bmp.image_size, bmp.body_len);
     }
 
     for (StegAlgo algo = LSB1; algo < STEG_ALGO_COUNT; algo++)

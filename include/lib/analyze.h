@@ -31,8 +31,18 @@ typedef struct
     Payload payload;
 } AnalyzeFinding;
 
+typedef struct
+{
+    int present;
+    size_t offset;
+    size_t length;
+    int printable;
+} AnalyzeTrailing;
+
 // algo and mode in crypto may be UNSET, and then every algorithm and mode is tried
 AnalyzeResult analyze_algorithm(StegAlgo algo, const Bmp *bmp, const CryptoParams *crypto, AnalyzeFinding *finding);
+
+AnalyzeResult analyze_trailing(const Bmp *bmp, AnalyzeTrailing *trailing);
 
 void analyze_finding_free(AnalyzeFinding *finding);
 
