@@ -36,6 +36,7 @@ BmpResult bmp_parse(uint8_t *data, size_t size, Bmp *bmp)
 
     uint32_t pixels_offset;
     uint32_t info_header_size;
+    uint32_t declared_size;
 
     // https://en.wikipedia.org/wiki/BMP_file_format#File_headers
     if (size <= BMP_MIN_HEADER_SIZE || data[0] != 'B' || data[1] != 'M')
@@ -60,13 +61,10 @@ BmpResult bmp_parse(uint8_t *data, size_t size, Bmp *bmp)
         return BMP_ERR_INVALID;
     }
 
-    uint32_t declared_size = read_le32(data + BMP_OFFSET_FILE_SIZE);
-    uint32_t image_size = read_le32(data + BMP_OFFSET_IMAGE_SIZE);
+    declared_size = read_le32(data + BMP_OFFSET_FILE_SIZE);
+    bmp->image_size = read_le32(data + BMP_OFFSET_IMAGE_SIZE);
 
-    bmp->declared_size = declared_size;
-    bmp->image_size = image_size;
-    bmp->pixels_offset = pixels_offset;
-
+    // declared_size is only trusted when pixels_offset <= declared_size <= size
     if (declared_size >= pixels_offset && declared_size <= size)
     {
         bmp->declared_size_valid = 1;
