@@ -61,6 +61,8 @@ make clean
 
 > Note: -extract adds the file extension automatically if there is none in `-out`.
 
+> Note: -embed and -extract only use the pixel data up to the size declared in the BMP header, so data appended after it is never overwritten.
+
 ### Analyze
 
 ```bash
@@ -73,18 +75,8 @@ Tries `LSB1`, `LSB4` and `LSBI` and prints a report to STDOUT with what each one
 - With `-pass` and no `-a` or `-m`, every algorithm and mode is tried. Giving `-a` or `-m` limits the search to it.
 - With `-out`, each finding is saved as `<base>_<algorithm><extension>`, for example `found_LSB4.png`. Without it, only the report is printed.
 - `-steg` and `-in` are not accepted.
-
-`-analyze` also detects data appended after the `bfSize` declared size (trailing data). If present, it reports
-`trailing data: N bytes at offset O` and, when the bytes are printable, a preview of the text. With
-`-out <base>`, the trailer is saved raw to `<base>_trailing.bin`. This is not a fourth steganography algorithm:
-it is an append-after-EOF attachment detected by `-analyze`.
-
-Example with `medianoche1.bmp` (49 bytes of trailing data):
-
-```bash
-./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp
-./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp -out /tmp/medianoche
-```
+- Data appended after the size declared in the header (trailing data) is reported with its offset and, if it is text, a preview. With `-out`, it is saved to `<base>_trailing.bin`. This is not a steganography algorithm: the data is just attached after the end of the image.
+- If the pixel data size declared in the header does not match the real one, a warning is printed to STDERR.
 
 ## Flags
 
@@ -120,4 +112,6 @@ Example with `medianoche1.bmp` (49 bytes of trailing data):
 ./bin/stegobmp -analyze -p files/ejemplo/ladoLSB4.bmp
 ./bin/stegobmp -analyze -p files/ejemplo/ladoLSBIdescfb.bmp
 ./bin/stegobmp -analyze -p files/ejemplo/ladoLSBIdescfb.bmp -pass margarita -out ./found
+./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp
+./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp -out ./found
 ```
