@@ -74,6 +74,18 @@ Tries `LSB1`, `LSB4` and `LSBI` and prints a report to STDOUT with what each one
 - With `-out`, each finding is saved as `<base>_<algorithm><extension>`, for example `found_LSB4.png`. Without it, only the report is printed.
 - `-steg` and `-in` are not accepted.
 
+`-analyze` also detects data appended after the `bfSize` declared size (trailing data). If present, it reports
+`trailing data: N bytes at offset O` and, when the bytes are printable, a preview of the text. With
+`-out <base>`, the trailer is saved raw to `<base>_trailing.bin`. This is not a fourth steganography algorithm:
+it is an append-after-EOF attachment detected by `-analyze`.
+
+Example with `medianoche1.bmp` (49 bytes of trailing data):
+
+```bash
+./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp
+./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp -out /tmp/medianoche
+```
+
 ## Flags
 
 | Flag | Description |
