@@ -220,6 +220,40 @@ CryptoMode crypto_mode_from_str(const char *s)
     return CRYPTO_MODE_INVALID;
 }
 
+const char *crypto_algo_name(CryptoAlgo algo)
+{
+    switch (algo)
+    {
+    case CRYPTO_AES128:
+        return "aes128";
+    case CRYPTO_AES192:
+        return "aes192";
+    case CRYPTO_AES256:
+        return "aes256";
+    case CRYPTO_3DES:
+        return "3des";
+    default:
+        return "unknown";
+    }
+}
+
+const char *crypto_mode_name(CryptoMode mode)
+{
+    switch (mode)
+    {
+    case CRYPTO_ECB:
+        return "ecb";
+    case CRYPTO_CFB:
+        return "cfb";
+    case CRYPTO_OFB:
+        return "ofb";
+    case CRYPTO_CBC:
+        return "cbc";
+    default:
+        return "unknown";
+    }
+}
+
 int crypto_enabled(const CryptoParams *p)
 {
     return p->password != NULL;

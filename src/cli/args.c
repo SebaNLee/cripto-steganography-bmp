@@ -10,6 +10,9 @@
     "[-m <ecb|cfb|ofb|cbc>] [-pass <password>]\n"                             \
     "  stegobmp -extract -p <bitmap.bmp> -out <file> -steg <LSB1|LSB4|LSBI> " \
     "[-a <aes128|aes192|aes256|3des>] [-m <ecb|cfb|ofb|cbc>] "                \
+    "[-pass <password>]\n"                                                    \
+    "  stegobmp -analyze -p <bitmap.bmp> [-out <file>] "                      \
+    "[-a <aes128|aes192|aes256|3des>] [-m <ecb|cfb|ofb|cbc>] "                \
     "[-pass <password>]\n"
 
 static int valid_value(const char *value)
@@ -50,6 +53,10 @@ ArgsResult args_parse(int argc, const char *argv[], Args *args)
     {
         args->operation = OP_EXTRACT;
     }
+    else if (strcmp(argv[1], "-analyze") == 0)
+    {
+        args->operation = OP_ANALYZE;
+    }
     else
     {
         return fail(args, ARGS_ERR_OPERATION, argv[1], NULL);
@@ -86,7 +93,7 @@ ArgsResult args_parse(int argc, const char *argv[], Args *args)
             }
             if (args->operation != OP_EMBED)
             {
-                return fail(args, ARGS_ERR_OPERATION, option, NULL);
+                return fail(args, ARGS_ERR_NOT_ALLOWED, option, NULL);
             }
             args->input_file = value;
             has_in = 1;
@@ -114,6 +121,10 @@ ArgsResult args_parse(int argc, const char *argv[], Args *args)
             if (has_steg)
             {
                 return fail(args, ARGS_ERR_DUPLICATE_OPTION, option, NULL);
+            }
+            if (args->operation == OP_ANALYZE)
+            {
+                return fail(args, ARGS_ERR_NOT_ALLOWED, option, NULL);
             }
 
             if (strcmp(value, "LSB1") == 0)
@@ -189,11 +200,11 @@ ArgsResult args_parse(int argc, const char *argv[], Args *args)
     {
         return fail(args, ARGS_ERR_MISSING_REQUIRED, "-p", NULL);
     }
-    if (!has_out)
+    if (args->operation != OP_ANALYZE && !has_out)
     {
         return fail(args, ARGS_ERR_MISSING_REQUIRED, "-out", NULL);
     }
-    if (!has_steg)
+    if (args->operation != OP_ANALYZE && !has_steg)
     {
         return fail(args, ARGS_ERR_MISSING_REQUIRED, "-steg", NULL);
     }
@@ -203,8 +214,8 @@ ArgsResult args_parse(int argc, const char *argv[], Args *args)
         return fail(args, ARGS_ERR_MISSING_REQUIRED, "-in", NULL);
     }
 
-    // without a password nothing is encrypted, so there is nothing to default
-    if (has_pass)
+    // analyze leaves algorithm and mode unset so it can try all of them
+    if (has_pass && args->operation != OP_ANALYZE)
     {
         crypto_apply_defaults(&args->crypto);
     }
@@ -219,7 +230,7 @@ const char *args_error_string(ArgsResult result)
     case ARGS_OK:
         return "ok";
     case ARGS_ERR_OPERATION:
-        return "expected exactly one of -embed or -extract, and -in only with -embed";
+        return "expected -embed, -extract or -analyze as the first argument";
     case ARGS_ERR_UNKNOWN_OPTION:
         return "unknown option";
     case ARGS_ERR_MISSING_VALUE:
@@ -228,6 +239,8 @@ const char *args_error_string(ArgsResult result)
         return "invalid option value";
     case ARGS_ERR_DUPLICATE_OPTION:
         return "option given more than once";
+    case ARGS_ERR_NOT_ALLOWED:
+        return "option not allowed with this operation";
     case ARGS_ERR_MISSING_REQUIRED:
         return "missing required option";
     default:

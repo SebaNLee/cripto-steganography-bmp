@@ -45,6 +45,9 @@ typedef struct
 CryptoAlgo crypto_algo_from_str(const char *s);
 CryptoMode crypto_mode_from_str(const char *s);
 
+const char *crypto_algo_name(CryptoAlgo algo);
+const char *crypto_mode_name(CryptoMode mode);
+
 int crypto_enabled(const CryptoParams *p);
 /* -a or -m given without -pass, so they are ignored. */
 int crypto_options_ignored(const CryptoParams *p);
