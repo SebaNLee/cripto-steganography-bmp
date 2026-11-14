@@ -106,26 +106,37 @@ mkdir results
 
 # bogota.bmp: LSBI; fuerza bruta (fue probar todos)
 # Se obtiene la password que es "conocido" con "\r" final
-./bin/stegobmp -extract -p files/grupo6/bogota.bmp -out ./results/bogota -steg LSBI
+./bin/stegobmp -analyze -p files/grupo6/bogota.bmp -out ./results/bogota
 
 # django.bmp: LSB4; fuerza bruta (fue probar todos)
-./bin/stegobmp -extract -p files/grupo6/django.bmp -out ./results/django -steg LSB4
+./bin/stegobmp -analyze -p files/grupo6/django.bmp -out ./results/django
 
-# se ve que al final hay un "sol6.txtUT" raro, se asume que debe ser un archivo oculto
-strings -a ./results/django.png > ./results/django.txt
+# frozen.bmp: con analyze
+# looks encrypted, necesita -pass
+./bin/stegobmp -analyze -p files/grupo6/frozen.bmp -out ./results/frozen
+
+# medianoche1.bmp: 
+# se obtiene: "al .png cambiar extension por .zip y descomprimir", pero es información redundante que ya teníamos
+./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp -out ./results/medianoche1
 
 # se extrae como zip y se obtiene sol6.txt con pistas del buscaminas, se saca: "aescbc"
-cp ./results/django.png ./results/django.zip
-unzip ./results/django.zip -d ./results/
+cp ./results/django_LSB4.png ./results/django_LSB4.zip
+unzip ./results/django_LSB4.zip -d ./results/
 
 # frozen.bmp: LSB1 AES192 CBC pass:'conocido\r'
 # video: "O nuestro agente ocultó datos en el archivo" (con fuerte acento español)
 ./bin/stegobmp -extract -p files/grupo6/frozen.bmp -out ./results/frozen -steg LSB1 -a aes192 -m cbc -pass $'conocido\r'
 
-# con la pista del video extraemos el mensaje extra
-# se obtiene: "al .png cambiar extension por .zip y descomprimir", pero es información redundante que ya teníamos
-strings -a files/grupo6/medianoche1.bmp > ./results/medianoche1.txt
+# o también, con analyze:
+./bin/stegobmp -analyze -p files/grupo6/frozen.bmp -out ./results/frozen -pass $'conocido\r'
+```
 
-# medianoche1.bmp: de este se había sacado el mensaje extra al final del archivo, asumimos que no tiene un stego embebido
-./bin/stegobmp -extract -p files/grupo6/medianoche1.bmp -out ./results/medianoche1 -steg LSB1 -a aes192 -m cbc -pass $'conocido\r'
+> Nota: Este es un flujo de análisis elegante al que se puede llegar con los comandos actuales. En realidad, se analizó y probó muchas más combinaciones y ramas no redactadas acá para llegar a este flujo final resumido. `-analyze` es la conclusión de todo esto y sirve como herramienta de alto nivel para el análisis de el zip del grupo (y tal vez otros más).
 
+Otros comandos intermedios que nos sirvieron:
+
+```bash
+# se ve que al final hay un "sol6.txtUT" raro, se asume que debe ser un archivo oculto
+strings -a ./results/django.png > ./results/django.txt
+
+```
