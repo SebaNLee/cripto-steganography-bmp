@@ -252,13 +252,97 @@ static int save_finding(const char *base, const char *steg_name, const AnalyzeFi
     return 0;
 }
 
+#define TRAILING_TEXT_PREVIEW 120
+#define TRAILING_HEX_PREVIEW 32
+
+static void print_escaped_byte(uint8_t c)
+{
+    switch (c)
+    {
+    case '"':
+    case '\\':
+        printf("\\%c", c);
+        break;
+    case '\r':
+        printf("\\r");
+        break;
+    case '\n':
+        printf("\\n");
+        break;
+    case '\t':
+        printf("\\t");
+        break;
+    default:
+        putchar(c);
+        break;
+    }
+}
+
+static void print_trailing(const Bmp *bmp, const AnalyzeTrailing *trailing)
+{
+    const uint8_t *data = bmp->data + trailing->offset;
+    size_t limit = trailing->printable ? TRAILING_TEXT_PREVIEW : TRAILING_HEX_PREVIEW;
+    size_t shown = trailing->length < limit ? trailing->length : limit;
+    const char *more = shown < trailing->length ? "..." : "";
+
+    printf("trailing data: %zu bytes at offset %zu\n", trailing->length, trailing->offset);
+
+    if (trailing->printable)
+    {
+        printf("  text: \"");
+        for (size_t i = 0; i < shown; i++)
+        {
+            print_escaped_byte(data[i]);
+        }
+        printf("%s\"\n", more);
+        return;
+    }
+
+    printf("  first bytes: ");
+    for (size_t i = 0; i < shown; i++)
+    {
+        printf("%02x", data[i]);
+    }
+    printf("%s\n", more);
+}
+
+static int save_trailing(const char *base, const Bmp *bmp, const AnalyzeTrailing *trailing)
+{
+    size_t path_len = strlen(base) + strlen("_trailing.bin") + 1;
+    char *path = malloc(path_len);
+    FileResult file_result;
+
+    if (path == NULL)
+    {
+        fprintf(stderr, "error: out of memory\n");
+        return 1;
+    }
+
+    snprintf(path, path_len, "%s_trailing.bin", base);
+
+    file_result = file_write_all(path, bmp->data + trailing->offset, trailing->length);
+    if (file_result != FILE_OK)
+    {
+        fprintf(stderr, "error: %s: %s\n", path, file_error_string(file_result));
+        free(path);
+        return 1;
+    }
+
+    printf("  saved to %s\n", path);
+    free(path);
+
+    return 0;
+}
+
 static int run_analyze(const Args *args)
 {
     uint8_t *bmp_data = NULL;
     size_t bmp_size = 0;
     Bmp bmp;
+    AnalyzeTrailing trailing;
     FileResult file_result;
     BmpResult bmp_result;
+    AnalyzeResult trailing_result;
     int status = 1;
 
     file_result = file_read_all(args->carrier_file, &bmp_data, &bmp_size);
@@ -273,6 +357,33 @@ static int run_analyze(const Args *args)
     {
         fprintf(stderr, "error: %s: %s\n", args->carrier_file, bmp_error_string(bmp_result));
         goto cleanup;
+    }
+
+    trailing_result = analyze_trailing(&bmp, &trailing);
+
+    if (trailing_result != ANALYZE_OK)
+    {
+        fprintf(stderr, "error: trailing data: %s\n", analyze_error_string(trailing_result));
+        goto cleanup;
+    }
+
+    if (trailing.present)
+    {
+        print_trailing(&bmp, &trailing);
+
+        if (args->output_file != NULL)
+        {
+            if (save_trailing(args->output_file, &bmp, &trailing) != 0)
+            {
+                goto cleanup;
+            }
+        }
+    }
+
+    if (bmp.image_size != 0 && bmp.image_size != bmp.body_len)
+    {
+        fprintf(stderr, "warning: the header says the pixel data is %u bytes, but it is %zu\n", bmp.image_size,
+                bmp.body_len);
     }
 
     for (StegAlgo algo = LSB1; algo < STEG_ALGO_COUNT; algo++)

@@ -118,6 +118,51 @@ AnalyzeResult analyze_algorithm(StegAlgo algo, const Bmp *bmp, const CryptoParam
     return ANALYZE_OK;
 }
 
+static int trailing_is_printable(const uint8_t *data, size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+    {
+        unsigned char c = data[i];
+
+        if ((c >= 0x20 && c <= 0x7e) || c == '\r' || c == '\n' || c == '\t')
+        {
+            continue;
+        }
+
+        return 0;
+    }
+
+    return 1;
+}
+
+AnalyzeResult analyze_trailing(const Bmp *bmp, AnalyzeTrailing *trailing)
+{
+    if (bmp == NULL || trailing == NULL)
+    {
+        return ANALYZE_ERR_INVALID_ARG;
+    }
+
+    memset(trailing, 0, sizeof(*trailing));
+
+    if (!bmp->declared_size_valid || bmp->trailing_len == 0)
+    {
+        return ANALYZE_OK;
+    }
+
+    if (bmp->trailing_offset > bmp->size ||
+        bmp->trailing_len > bmp->size - bmp->trailing_offset)
+    {
+        return ANALYZE_ERR_INVALID_ARG;
+    }
+
+    trailing->present = 1;
+    trailing->offset = bmp->trailing_offset;
+    trailing->length = bmp->trailing_len;
+    trailing->printable = trailing_is_printable(bmp->data + bmp->trailing_offset, bmp->trailing_len);
+
+    return ANALYZE_OK;
+}
+
 void analyze_finding_free(AnalyzeFinding *finding)
 {
     if (finding == NULL)

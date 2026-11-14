@@ -12,6 +12,8 @@
 #define BMP_OFFSET_INFO_HEADER_SIZE 14
 #define BMP_OFFSET_BITS_PER_PIXEL 28
 #define BMP_OFFSET_COMPRESSION 30
+#define BMP_OFFSET_FILE_SIZE 2
+#define BMP_OFFSET_IMAGE_SIZE 34
 
 static uint16_t read_le16(const uint8_t *buf)
 {
@@ -34,6 +36,7 @@ BmpResult bmp_parse(uint8_t *data, size_t size, Bmp *bmp)
 
     uint32_t pixels_offset;
     uint32_t info_header_size;
+    uint32_t declared_size;
 
     // https://en.wikipedia.org/wiki/BMP_file_format#File_headers
     if (size <= BMP_MIN_HEADER_SIZE || data[0] != 'B' || data[1] != 'M')
@@ -58,10 +61,28 @@ BmpResult bmp_parse(uint8_t *data, size_t size, Bmp *bmp)
         return BMP_ERR_INVALID;
     }
 
+    declared_size = read_le32(data + BMP_OFFSET_FILE_SIZE);
+    bmp->image_size = read_le32(data + BMP_OFFSET_IMAGE_SIZE);
+
+    // declared_size is only trusted when pixels_offset <= declared_size <= size
+    if (declared_size >= pixels_offset && declared_size <= size)
+    {
+        bmp->declared_size_valid = 1;
+        bmp->body_len = (size_t)(declared_size - pixels_offset);
+        bmp->trailing_offset = (size_t)declared_size;
+        bmp->trailing_len = size - (size_t)declared_size;
+    }
+    else
+    {
+        bmp->declared_size_valid = 0;
+        bmp->body_len = size - pixels_offset;
+        bmp->trailing_offset = size;
+        bmp->trailing_len = 0;
+    }
+
     bmp->data = data;
     bmp->size = size;
     bmp->body = data + pixels_offset;
-    bmp->body_len = size - pixels_offset;
 
     return BMP_OK;
 }

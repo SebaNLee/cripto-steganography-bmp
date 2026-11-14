@@ -16,8 +16,15 @@ typedef struct
 {
     uint8_t *data;
     size_t size;
+
     uint8_t *body;
     size_t body_len;
+
+    uint32_t image_size;
+
+    int declared_size_valid;
+    size_t trailing_offset;
+    size_t trailing_len;
 } Bmp;
 
 BmpResult bmp_parse(uint8_t *data, size_t size, Bmp *bmp);
