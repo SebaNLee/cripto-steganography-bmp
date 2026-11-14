@@ -252,122 +252,58 @@ static int save_finding(const char *base, const char *steg_name, const AnalyzeFi
     return 0;
 }
 
-static void escape_trailing_text(char *out, size_t out_len, const uint8_t *data, size_t len)
+#define TRAILING_TEXT_PREVIEW 120
+#define TRAILING_HEX_PREVIEW 32
+
+static void print_escaped_byte(uint8_t c)
 {
-    size_t written = 0;
-
-    for (size_t i = 0; i < len && written + 1 < out_len; i++)
+    switch (c)
     {
-        unsigned char c = data[i];
-
-        if (c == '"' || c == '\\')
-        {
-            if (written + 2 >= out_len)
-            {
-                break;
-            }
-            out[written++] = '\\';
-            out[written++] = (char)c;
-        }
-        else if (c == '\r')
-        {
-            if (written + 2 >= out_len)
-            {
-                break;
-            }
-            out[written++] = '\\';
-            out[written++] = 'r';
-        }
-        else if (c == '\n')
-        {
-            if (written + 2 >= out_len)
-            {
-                break;
-            }
-            out[written++] = '\\';
-            out[written++] = 'n';
-        }
-        else if (c == '\t')
-        {
-            if (written + 2 >= out_len)
-            {
-                break;
-            }
-            out[written++] = '\\';
-            out[written++] = 't';
-        }
-        else if (c >= 0x20 && c <= 0x7e)
-        {
-            out[written++] = (char)c;
-        }
-        else
-        {
-            if (written + 4 >= out_len)
-            {
-                break;
-            }
-            written += (size_t)snprintf(out + written, out_len - written, "\\x%02x", c);
-        }
+    case '"':
+    case '\\':
+        printf("\\%c", c);
+        break;
+    case '\r':
+        printf("\\r");
+        break;
+    case '\n':
+        printf("\\n");
+        break;
+    case '\t':
+        printf("\\t");
+        break;
+    default:
+        putchar(c);
+        break;
     }
-
-    out[written] = '\0';
 }
 
 static void print_trailing(const Bmp *bmp, const AnalyzeTrailing *trailing)
 {
-    size_t text_preview_len = trailing->length;
-    if (text_preview_len > 120)
-    {
-        text_preview_len = 120;
-    }
-
-    size_t hex_preview_len = trailing->length;
-    if (hex_preview_len > 32)
-    {
-        hex_preview_len = 32;
-    }
-
-    char *preview = malloc(text_preview_len * 4 + 1);
-    if (preview == NULL)
-    {
-        fprintf(stderr, "error: out of memory\n");
-        return;
-    }
+    const uint8_t *data = bmp->data + trailing->offset;
+    size_t limit = trailing->printable ? TRAILING_TEXT_PREVIEW : TRAILING_HEX_PREVIEW;
+    size_t shown = trailing->length < limit ? trailing->length : limit;
+    const char *more = shown < trailing->length ? "..." : "";
 
     printf("trailing data: %zu bytes at offset %zu\n", trailing->length, trailing->offset);
 
     if (trailing->printable)
     {
-        escape_trailing_text(preview, text_preview_len * 4 + 1, bmp->data + trailing->offset, text_preview_len);
-
-        if (trailing->length > 120)
+        printf("  text: \"");
+        for (size_t i = 0; i < shown; i++)
         {
-            preview[120] = '\0';
-            printf("  text: \"%s...\"\n", preview);
+            print_escaped_byte(data[i]);
         }
-        else
-        {
-            printf("  text: \"%s\"\n", preview);
-        }
-
-        free(preview);
+        printf("%s\"\n", more);
         return;
     }
 
-    char *hex = malloc(hex_preview_len * 2 + 1);
-    if (hex != NULL)
+    printf("  first bytes: ");
+    for (size_t i = 0; i < shown; i++)
     {
-        for (size_t i = 0; i < hex_preview_len; i++)
-        {
-            snprintf(hex + i * 2, 3, "%02x", bmp->data[trailing->offset + i]);
-        }
-
-        hex[hex_preview_len * 2] = '\0';
-        printf("  first bytes: %s%s\n", hex, trailing->length > 32 ? "..." : "");
-        free(hex);
+        printf("%02x", data[i]);
     }
-
-    free(preview);
+    printf("%s\n", more);
 }
 
 static int save_trailing(const char *base, const Bmp *bmp, const AnalyzeTrailing *trailing)
@@ -403,8 +339,10 @@ static int run_analyze(const Args *args)
     uint8_t *bmp_data = NULL;
     size_t bmp_size = 0;
     Bmp bmp;
+    AnalyzeTrailing trailing;
     FileResult file_result;
     BmpResult bmp_result;
+    AnalyzeResult trailing_result;
     int status = 1;
 
     file_result = file_read_all(args->carrier_file, &bmp_data, &bmp_size);
@@ -421,8 +359,7 @@ static int run_analyze(const Args *args)
         goto cleanup;
     }
 
-    AnalyzeTrailing trailing;
-    AnalyzeResult trailing_result = analyze_trailing(&bmp, &trailing);
+    trailing_result = analyze_trailing(&bmp, &trailing);
 
     if (trailing_result != ANALYZE_OK)
     {
@@ -445,8 +382,8 @@ static int run_analyze(const Args *args)
 
     if (bmp.image_size != 0 && bmp.image_size != bmp.body_len)
     {
-        fprintf(stderr, "warning: biSizeImage=%u does not match body length %zu\n",
-                bmp.image_size, bmp.body_len);
+        fprintf(stderr, "warning: the header says the pixel data is %u bytes, but it is %zu\n", bmp.image_size,
+                bmp.body_len);
     }
 
     for (StegAlgo algo = LSB1; algo < STEG_ALGO_COUNT; algo++)
