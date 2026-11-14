@@ -96,28 +96,30 @@ make clean
 
 
 ```bash
+mkdir results
+
 # bogota.bmp: LSBI; fuerza bruta (fue probar todos)
 # Se obtiene la password que es "conocido" con "\r" final
-./bin/stegobmp -extract -p files/grupo6/bogota.bmp -out bogota -steg LSBI
+./bin/stegobmp -extract -p files/grupo6/bogota.bmp -out ./results/bogota -steg LSBI
 
 # django.bmp: LSB4; fuerza bruta (fue probar todos)
-./bin/stegobmp -extract -p files/grupo6/django.bmp -out django -steg LSB4
+./bin/stegobmp -extract -p files/grupo6/django.bmp -out ./results/django -steg LSB4
 
 # se ve que al final hay un "sol6.txtUT" raro, se asume que debe ser un archivo oculto
-strings -a django.png > django.txt
+strings -a ./results/django.png > ./results/django.txt
 
 # se extrae como zip y se obtiene sol6.txt con pistas del buscaminas, se saca: "aescbc"
-cp django.png django.zip
-unzip django.zip
+cp ./results/django.png ./results/django.zip
+unzip ./results/django.zip -d ./results/
 
 # frozen.bmp: LSB1 AES192 CBC pass:'conocido\r'
 # video: "O nuestro agente ocultó datos en el archivo" (con fuerte acento español)
-./bin/stegobmp -extract -p files/grupo6/frozen.bmp -out frozen -steg LSB1 -a aes192 -m cbc -pass $'conocido\r'
+./bin/stegobmp -extract -p files/grupo6/frozen.bmp -out ./results/frozen -steg LSB1 -a aes192 -m cbc -pass $'conocido\r'
 
 # con la pista del video extraemos el mensaje extra
 # se obtiene: "al .png cambiar extension por .zip y descomprimir", pero es información redundante que ya teníamos
-strings -a files/grupo6/medianoche1.bmp > medianoche1.txt
+strings -a files/grupo6/medianoche1.bmp > ./results/medianoche1.txt
 
-# medianoche1.bmp: ???
-./bin/stegobmp -extract -p files/grupo6/medianoche1.bmp -out medianoche1 -steg LSB1 -a aes192 -m cbc -pass $'conocido\r'
+# medianoche1.bmp: de este se había sacado el mensaje extra al final del archivo, asumimos que no tiene un stego embebido
+./bin/stegobmp -extract -p files/grupo6/medianoche1.bmp -out ./results/medianoche1 -steg LSB1 -a aes192 -m cbc -pass $'conocido\r'
 ```
