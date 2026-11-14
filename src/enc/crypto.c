@@ -259,13 +259,6 @@ int crypto_enabled(const CryptoParams *p)
     return p->password != NULL;
 }
 
-int crypto_options_ignored(const CryptoParams *p)
-{
-    if (crypto_enabled(p))
-        return 0;
-    return p->algo != CRYPTO_ALGO_UNSET || p->mode != CRYPTO_MODE_UNSET;
-}
-
 void crypto_apply_defaults(CryptoParams *p)
 {
     if (!crypto_enabled(p))

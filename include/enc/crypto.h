@@ -49,8 +49,6 @@ const char *crypto_algo_name(CryptoAlgo algo);
 const char *crypto_mode_name(CryptoMode mode);
 
 int crypto_enabled(const CryptoParams *p);
-/* -a or -m given without -pass, so they are ignored. */
-int crypto_options_ignored(const CryptoParams *p);
 void crypto_apply_defaults(CryptoParams *p);
 
 CryptoResult crypto_encrypt(const CryptoParams *p, const uint8_t *in, size_t in_len,
