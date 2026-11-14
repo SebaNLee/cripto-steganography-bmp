@@ -5,6 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#define TMP_SUFFIX_SIZE 16
+
 FileResult file_read_all(const char *path, uint8_t **out, size_t *out_len)
 {
     FILE *file;
@@ -79,7 +81,7 @@ FileResult file_write_all(const char *path, const uint8_t *data, size_t len)
         return FILE_ERR_INVALID_ARG;
     }
 
-    tmp_len = strlen(path) + 16;
+    tmp_len = strlen(path) + TMP_SUFFIX_SIZE;
     tmp_path = malloc(tmp_len);
     if (tmp_path == NULL)
     {
