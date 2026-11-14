@@ -341,11 +341,6 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    if (crypto_options_ignored(&args.crypto))
-    {
-        fprintf(stderr, "warning: -a/-m ignored without -pass\n");
-    }
-
     if (args.operation == OP_EMBED)
     {
         return run_embed(&args);

@@ -214,6 +214,11 @@ ArgsResult args_parse(int argc, const char *argv[], Args *args)
         return fail(args, ARGS_ERR_MISSING_REQUIRED, "-in", NULL);
     }
 
+    if (!has_pass && (has_algo || has_mode))
+    {
+        return fail(args, ARGS_ERR_CRYPTO_WITHOUT_PASSWORD, has_algo ? "-a" : "-m", NULL);
+    }
+
     // analyze leaves algorithm and mode unset so it can try all of them
     if (has_pass && args->operation != OP_ANALYZE)
     {
@@ -243,6 +248,8 @@ const char *args_error_string(ArgsResult result)
         return "option not allowed with this operation";
     case ARGS_ERR_MISSING_REQUIRED:
         return "missing required option";
+    case ARGS_ERR_CRYPTO_WITHOUT_PASSWORD:
+        return "crypto options -a/-m require -pass";
     default:
         return "unknown error";
     }
