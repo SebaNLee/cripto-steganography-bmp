@@ -81,6 +81,7 @@ FileResult file_write_all(const char *path, const uint8_t *data, size_t len)
         return FILE_ERR_INVALID_ARG;
     }
 
+    // write to a temp file and rename, so a failed write never leaves a broken output
     tmp_len = strlen(path) + TMP_SUFFIX_SIZE;
     tmp_path = malloc(tmp_len);
     if (tmp_path == NULL)
