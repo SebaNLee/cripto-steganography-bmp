@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define PAYLOAD_HEADER_SIZE 4
 #define PAYLOAD_EXT_MAX 256
 
 typedef enum

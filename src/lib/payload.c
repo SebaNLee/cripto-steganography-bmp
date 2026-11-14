@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PAYLOAD_HEADER_SIZE 4
-
 // plain:     BE32(real size) || file data || extension
 // encrypted: BE32(cipher size) || encrypt(BE32(real size) || file data || extension)
 
