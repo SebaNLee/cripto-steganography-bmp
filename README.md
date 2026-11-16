@@ -1,4 +1,4 @@
-# Implementation Assignment: Steganography - Cryptography and Security (72.04)
+# Steganography - Criptografía y Seguridad (72.04)
 
 ## Members
 
@@ -61,22 +61,13 @@ make clean
 
 > Note: -extract adds the file extension automatically if there is none in `-out`.
 
-> Note: -embed and -extract only use the pixel data up to the size declared in the BMP header, so data appended after it is never overwritten.
-
 ### Analyze
+
+Tries all the LSB algorithms, cripgoraphy algorithms (if pass `-pass` is included), and other very specific analysis to optimize our group ZIP analysis. Prints a report to STDOUT with what have been found including: hidden message, possible encrypted data, and trailing data.
 
 ```bash
 ./bin/stegobmp -analyze -p <bitmap.bmp> [-out <base>] [-a <aes128|aes192|aes256|3des>] [-m <ecb|cfb|ofb|cbc>] [-pass <password>]
 ```
-
-Tries `LSB1`, `LSB4` and `LSBI` and prints a report to STDOUT with what each one found.
-
-- If the hidden data looks encrypted and there is no `-pass`, the report says a password is required.
-- With `-pass` and no `-a` or `-m`, every algorithm and mode is tried. Giving `-a` or `-m` limits the search to it.
-- With `-out`, each finding is saved as `<base>_<algorithm><extension>`, for example `found_LSB4.png`. Without it, only the report is printed.
-- `-steg` and `-in` are not accepted.
-- Data appended after the size declared in the header (trailing data) is reported with its offset and, if it is text, a preview. With `-out`, it is saved to `<base>_trailing.bin`. This is not a steganography algorithm: the data is just attached after the end of the image.
-- If the pixel data size declared in the header does not match the real one, a warning is printed to STDERR.
 
 ## Flags
 
@@ -104,14 +95,48 @@ Tries `LSB1`, `LSB4` and `LSBI` and prints a report to STDOUT with what each one
 ./bin/stegobmp -extract -p files/ejemplo/ladoLSB1aes128cbc.bmp -out ./ -steg LSB1 -pass margarita
 ./bin/stegobmp -extract -p files/ejemplo/ladoLSBIaes256ofb.bmp -out ./ -steg LSBI -a aes256 -m ofb -pass margarita
 ./bin/stegobmp -extract -p files/ejemplo/ladoLSBIdescfb.bmp -out ./ -steg LSBI -a 3des -m cfb -pass margarita
-```
-
-### Analyze examples
-
-```bash
-./bin/stegobmp -analyze -p files/ejemplo/ladoLSB4.bmp
 ./bin/stegobmp -analyze -p files/ejemplo/ladoLSBIdescfb.bmp
 ./bin/stegobmp -analyze -p files/ejemplo/ladoLSBIdescfb.bmp -pass margarita -out ./found
-./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp
-./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp -out ./found
+```
+
+### Group examples
+
+```bash
+mkdir results
+
+# bogota.bmp: LSBI; fuerza bruta (fue probar todos)
+# Se obtiene la password que es "conocido" con "\r" final
+./bin/stegobmp -analyze -p files/grupo6/bogota.bmp -out ./results/bogota
+
+# django.bmp: LSB4; fuerza bruta (fue probar todos)
+./bin/stegobmp -analyze -p files/grupo6/django.bmp -out ./results/django
+
+# frozen.bmp: con analyze
+# looks encrypted, necesita -pass
+./bin/stegobmp -analyze -p files/grupo6/frozen.bmp -out ./results/frozen
+
+# medianoche1.bmp: 
+# se obtiene: "al .png cambiar extension por .zip y descomprimir"
+./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp -out ./results/medianoche1
+
+# se extrae como zip y se obtiene sol6.txt con pistas del buscaminas, se saca: "aescbc"
+cp ./results/django_LSB4.png ./results/django_LSB4.zip
+unzip ./results/django_LSB4.zip -d ./results/
+
+# frozen.bmp: LSB1 AES192 CBC pass:'conocido\r'
+# video: "O nuestro agente ocultó datos en el archivo" (con fuerte acento español)
+./bin/stegobmp -extract -p files/grupo6/frozen.bmp -out ./results/frozen -steg LSB1 -a aes192 -m cbc -pass $'conocido\r'
+
+# o también, con analyze:
+./bin/stegobmp -analyze -p files/grupo6/frozen.bmp -out ./results/frozen -pass $'conocido\r'
+```
+
+> Nota: Este es un flujo de análisis elegante al que se puede llegar con los comandos actuales. En realidad, se analizó y probó muchas más combinaciones y ramas no redactadas acá para llegar a este flujo final resumido. `-analyze` es la conclusión de todo esto y sirve como herramienta de alto nivel para el análisis de el zip del grupo (y tal vez otros más).
+
+Otros comandos intermedios que nos sirvieron:
+
+```bash
+# se ve que al final hay un "sol6.txtUT" raro, se asume que debe ser un archivo oculto
+strings -a ./results/django.png > ./results/django.txt
+
 ```
