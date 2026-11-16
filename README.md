@@ -63,7 +63,7 @@ make clean
 
 ### Analyze
 
-Tries all the LSB algorithms, cripgoraphy algorithms (if pass `-pass` is included), and other analysis. Prints a report to STDOUT with what have been found including: hidden message, possible encrypted data, and trailing data.
+Tries all the LSB algorithms, cripgoraphy algorithms (if pass `-pass` is included), and other very specific analysis to optimize our group ZIP analysis. Prints a report to STDOUT with what have been found including: hidden message, possible encrypted data, and trailing data.
 
 ```bash
 ./bin/stegobmp -analyze -p <bitmap.bmp> [-out <base>] [-a <aes128|aes192|aes256|3des>] [-m <ecb|cfb|ofb|cbc>] [-pass <password>]
@@ -116,7 +116,7 @@ mkdir results
 ./bin/stegobmp -analyze -p files/grupo6/frozen.bmp -out ./results/frozen
 
 # medianoche1.bmp: 
-# se obtiene: "al .png cambiar extension por .zip y descomprimir", pero es información redundante que ya teníamos
+# se obtiene: "al .png cambiar extension por .zip y descomprimir"
 ./bin/stegobmp -analyze -p files/grupo6/medianoche1.bmp -out ./results/medianoche1
 
 # se extrae como zip y se obtiene sol6.txt con pistas del buscaminas, se saca: "aescbc"
