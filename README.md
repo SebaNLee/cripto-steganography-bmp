@@ -140,3 +140,5 @@ Otros comandos intermedios que nos sirvieron:
 strings -a ./results/django.png > ./results/django.txt
 
 ```
+
+> Informe en: `doc/informe.pdf`
